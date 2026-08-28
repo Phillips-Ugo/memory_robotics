@@ -65,6 +65,17 @@ suspecting anything deeper.
 **Lesson:** report an interval, not a point. 3/5 and 12/20 are both "60%" but they
 are very different amounts of evidence.
 
+**Gotcha #2 (long-running jobs on a laptop):** the first 20-episode run "ran" for an
+hour but consumed only ~1.7 CPU-minutes — macOS put the machine to sleep and froze
+the detached process. Also, Python block-buffers stdout when redirected to a file,
+so the log looked empty even for completed episodes. Fixes, now standard practice:
+- wrap long jobs in `caffeinate -i` (keeps macOS awake while the command runs)
+- set `PYTHONUNBUFFERED=1` (or `python -u`) so logs stream line-by-line
+- monitors must also detect process death, not just the success line — silence
+  looks identical to "still running"
+On a rented Linux GPU box none of the sleep issues apply, but unbuffered logs and
+death-aware monitors stay best practice.
+
 ## 2026-08-27 — Day 0 result
 
 **Result after the fix: 60% success over 5 episodes (mean best reward 0.988), on MPS.**
