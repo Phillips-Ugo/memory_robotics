@@ -85,12 +85,33 @@ def run_episode(env, policy, stats, device, seed: int, record: bool):
     return terminated, max(rewards), frames
 
 
+def wilson_interval(successes: int, n: int, z: float = 1.96) -> tuple[float, float]:
+    """95% Wilson confidence interval for a success rate — honest error bars
+    even at small n, unlike the naive +/- formula."""
+    if n == 0:
+        return 0.0, 1.0
+    p = successes / n
+    denom = 1 + z**2 / n
+    center = (p + z**2 / (2 * n)) / denom
+    half = z * ((p * (1 - p) + z**2 / (4 * n)) / n) ** 0.5 / denom
+    return max(0.0, center - half), min(1.0, center + half)
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--episodes", type=int, default=5)
     parser.add_argument("--max-steps", type=int, default=300)
     parser.add_argument("--device", type=str, default=None)
+    parser.add_argument("--wandb", choices=["off", "offline", "online"], default="offline",
+                        help="experiment tracking; 'online' needs `wandb login` first")
     args = parser.parse_args()
+
+    run = None
+    if args.wandb != "off":
+        import wandb
+        run = wandb.init(project="memory-robotics", job_type="eval",
+                         config=vars(args) | {"policy": "lerobot/diffusion_pusht"},
+                         mode=args.wandb)
 
     device = pick_device(args.device)
     print(f"device: {device}")
@@ -120,6 +141,9 @@ def main():
         best_coverages.append(best_reward)
         print(f"episode {ep}: {'SUCCESS' if success else 'fail'} "
               f"(best reward {best_reward:.3f})")
+        if run:
+            run.log({"episode": ep, "success": int(success), "best_reward": best_reward,
+                     "running_success_rate": float(np.mean(successes))})
         if frames:
             try:
                 import imageio
@@ -130,8 +154,13 @@ def main():
                 print(f"(video save skipped: {e})")
 
     rate = float(np.mean(successes))
+    lo, hi = wilson_interval(sum(successes), args.episodes)
     print(f"\nsuccess rate: {rate:.0%} over {args.episodes} episodes "
-          f"(mean best reward {np.mean(best_coverages):.3f})")
+          f"(95% CI [{lo:.0%}, {hi:.0%}], mean best reward {np.mean(best_coverages):.3f})")
+    if run:
+        run.summary.update({"success_rate": rate, "ci_low": lo, "ci_high": hi,
+                            "mean_best_reward": float(np.mean(best_coverages))})
+        run.finish()
 
 
 if __name__ == "__main__":

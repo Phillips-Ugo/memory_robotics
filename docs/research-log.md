@@ -43,6 +43,30 @@ MIN_MAX → [-1, 1] for state/action (lerobot's convention, verified in
 "works" at 0%. Check the *units* of what goes in and comes out of a network before
 suspecting anything deeper.
 
+## 2026-08-28 — Day 1: tracking, honest error bars, Phase 1 recon
+
+**Did:**
+- Wired Weights & Biases into the eval script (`--wandb off|offline|online`,
+  default offline so it works without an account). Logs per-episode success +
+  running rate, summary with success rate and CI.
+- Added a Wilson 95% confidence interval to the eval output — at n=5, "60%"
+  really means "somewhere between ~23% and ~88%", which is why the honesty
+  metrics in the roadmap matter.
+- Launched a 20-episode eval (detached with nohup + a log-file monitor, since
+  it outlives the shell-command timeout).
+- Verified all four Phase 0 readings are real; created paper-note stubs with
+  links. Found MemER is Oct 2025 and RoboMME has a follow-up (RoboMME-Interference).
+- Phase 1 recon (see `docs/phase1-plan.md`): RoboMemArena repo = data + BDDL/LIBERO-style
+  eval harness + generic policy adapter; baselines live in external repos (openpi,
+  memer-policy/memer — Qwen2.5-VL-3B + π₀.₅). Reproduction will be assembly work
+  across three repos, so the milestone ladder starts with the harness + a dummy
+  policy, no VLA.
+
+**Lesson:** report an interval, not a point. 3/5 and 12/20 are both "60%" but they
+are very different amounts of evidence.
+
+## 2026-08-27 — Day 0 result
+
 **Result after the fix: 60% success over 5 episodes (mean best reward 0.988), on MPS.**
 Matches the checkpoint's reported ballpark. The two failures reached 0.96–0.98 coverage —
 near-misses just under the 0.95-coverage success threshold, not blow-ups. First
