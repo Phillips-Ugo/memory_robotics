@@ -49,7 +49,7 @@ Consolidation-with-revision is the moat. Experiment X4 is the proof.
 
 ### Phase 0 — Run a robot policy, any policy (weeks 1–2) ← *now*
 - [x] Repo, uv environment, LeRobot installed
-- [ ] Success-rate number I produced myself (`scripts/00_eval_pretrained.py`)
+- [x] Success-rate number I produced myself (`scripts/00_eval_pretrained.py` — 60% on PushT, 27 Aug)
 - [ ] Experiment tracking set up (W&B)
 - [ ] Four one-page paper notes: CoRL memory-workshop page, RoboMemArena, MemER, RoboMME
 - [ ] In my own words: the Problem A / Problem B distinction (blog post #1)

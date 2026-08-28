@@ -21,6 +21,31 @@ try:
 except ImportError:  # older lerobot layout
     from lerobot.common.policies.diffusion.modeling_diffusion import DiffusionPolicy
 
+REPO_ID = "lerobot/diffusion_pusht"
+
+
+def load_norm_stats():
+    """Pull normalization stats out of the old-format checkpoint.
+
+    The lerobot/diffusion_pusht checkpoint predates lerobot 0.6's processor
+    pipelines: its normalization buffers live inside model.safetensors under
+    keys the new DiffusionPolicy no longer has, so from_pretrained drops them
+    ("Unexpected key(s) when loading model"). Without them the policy sees raw
+    pixel coordinates and returns actions stuck in [-1, 1] -> 0% success.
+    """
+    from huggingface_hub import hf_hub_download
+    from safetensors.torch import load_file
+
+    sd = load_file(hf_hub_download(REPO_ID, "model.safetensors"))
+    return {
+        "image_mean": sd["normalize_inputs.buffer_observation_image.mean"],
+        "image_std": sd["normalize_inputs.buffer_observation_image.std"],
+        "state_min": sd["normalize_inputs.buffer_observation_state.min"],
+        "state_max": sd["normalize_inputs.buffer_observation_state.max"],
+        "action_min": sd["unnormalize_outputs.buffer_action.min"],
+        "action_max": sd["unnormalize_outputs.buffer_action.max"],
+    }
+
 
 def pick_device(requested: str | None) -> torch.device:
     if requested:
@@ -30,7 +55,7 @@ def pick_device(requested: str | None) -> torch.device:
     return torch.device("cpu")
 
 
-def run_episode(env, policy, device, seed: int, record: bool):
+def run_episode(env, policy, stats, device, seed: int, record: bool):
     policy.reset()
     obs, info = env.reset(seed=seed)
     frames = [env.render()] if record else []
@@ -40,15 +65,18 @@ def run_episode(env, policy, device, seed: int, record: bool):
         state = torch.from_numpy(obs["agent_pos"]).to(torch.float32)
         image = torch.from_numpy(obs["pixels"]).to(torch.float32) / 255
         image = image.permute(2, 0, 1)  # HWC -> CHW
+        # MIN_MAX -> [-1, 1] for state, MEAN_STD for image (per policy config)
+        state = 2 * (state - stats["state_min"]) / (stats["state_max"] - stats["state_min"]) - 1
+        image = (image - stats["image_mean"]) / stats["image_std"]
         batch = {
             "observation.state": state.unsqueeze(0).to(device),
             "observation.image": image.unsqueeze(0).to(device),
         }
         with torch.inference_mode():
-            action = policy.select_action(batch)
-        obs, reward, terminated, truncated, info = env.step(
-            action.squeeze(0).cpu().numpy()
-        )
+            action = policy.select_action(batch).squeeze(0).cpu()
+        # inverse MIN_MAX: [-1, 1] -> pixel coordinates
+        action = (action + 1) / 2 * (stats["action_max"] - stats["action_min"]) + stats["action_min"]
+        obs, reward, terminated, truncated, info = env.step(action.numpy())
         rewards.append(reward)
         if record:
             frames.append(env.render())
@@ -67,10 +95,11 @@ def main():
     device = pick_device(args.device)
     print(f"device: {device}")
 
-    print("loading lerobot/diffusion_pusht ...")
-    policy = DiffusionPolicy.from_pretrained("lerobot/diffusion_pusht")
+    print(f"loading {REPO_ID} ...")
+    policy = DiffusionPolicy.from_pretrained(REPO_ID)
     policy.to(device)
     policy.eval()
+    stats = load_norm_stats()
 
     env = gym.make(
         "gym_pusht/PushT-v0",
@@ -85,7 +114,7 @@ def main():
 
     for ep in range(args.episodes):
         success, best_reward, frames = run_episode(
-            env, policy, device, seed=1000 + ep, record=(ep == 0)
+            env, policy, stats, device, seed=1000 + ep, record=(ep == 0)
         )
         successes.append(success)
         best_coverages.append(best_reward)
