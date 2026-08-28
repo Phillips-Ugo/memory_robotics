@@ -76,6 +76,11 @@ so the log looked empty even for completed episodes. Fixes, now standard practic
 On a rented Linux GPU box none of the sleep issues apply, but unbuffered logs and
 death-aware monitors stay best practice.
 
+**Result (attempt 2, ~35 min wall): 13/20 SUCCESS = 65%, 95% CI [43%, 82%],
+mean best reward 0.932.** Consistent with yesterday's 3/5. Logged to W&B (offline).
+Note how wide the interval still is at n=20 — comparing two policies within ~20
+points of each other needs far more episodes than intuition suggests.
+
 ## 2026-08-27 — Day 0 result
 
 **Result after the fix: 60% success over 5 episodes (mean best reward 0.988), on MPS.**
