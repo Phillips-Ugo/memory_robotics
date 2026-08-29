@@ -1,5 +1,40 @@
 # Research log
 
+## 2026-08-29 — Day 2: RoboMemArena harness running on the Mac (Phase 1 M1 ✓)
+
+**Did:** Got the RoboMemArena eval harness running end-to-end locally with a dummy
+policy adapter (`scripts/01_rma_dummy_adapter.py`): env creation, BDDL task 1,
+adapter query, 60 sim steps, stage scoring (TSR/CSR = 0%, as a do-nothing policy
+should), main + wrist-cam videos saved. ~4s for a 60-step episode on CPU MuJoCo.
+Reproducible via `scripts/setup_rma_env.sh` (own venv in gitignored vendor/).
+
+**Four dependency landmines, in the order they fired:**
+1. LIBERO's first import blocks on an interactive dataset-folder prompt →
+   EOFError in scripts; pipe `N` in once.
+2. robosuite 1.4.1 + mujoco 3.x = AssertionError in `get_joint_qpos_addr`
+   (joint indexing changed in mujoco 3) → pin mujoco==2.3.7.
+3. mujoco 2.3.7 hardcodes the pre-Sequoia OpenGL framework path → one-line sed
+   patch to cgl.py.
+4. Harness defaults MUJOCO_GL=egl (Linux headless); macOS needs MUJOCO_GL=glfw
+   (it's a setdefault, so exporting first wins). Plus imageio[ffmpeg] for videos.
+
+**Learned about the benchmark itself:**
+- Adapter contract is genuinely minimal: `infer_actions(obs, prompt, resize_size)
+  -> [horizon, action_dim]` float32; obs comes pre-processed
+  ('observation/image', 'observation/wrist_image', 'observation/state') with raw
+  env obs in `obs['_raw_obs']`. reset() between episodes. This is the plug point
+  for a memory layer.
+- Scoring is stage-based: CSR = average stage completion, TSR = all required
+  stages complete. Counting-pour tasks reject a third pour via a 30-step monitor.
+- Official protocol: 51 trials/task, seed 50, max 2500 steps, replan every 10.
+- Task prompts are two-part sequential instructions ("pick A into basket, then
+  pick B into same basket") — memory-dependence is in the sequencing/occlusion.
+
+**Next (M2):** π₀.₅ inference through this adapter needs a GPU box — the openpi
+runtime won't fly on MPS. Before renting, answer the open questions in
+docs/phase1-plan.md from the openpi + MemER READMEs.
+
+
 One entry per working session. Keep it honest: what I tried, what actually happened
 (numbers, errors), what I concluded, what's next. This log is the raw material for
 weekly public posts — write it so a stranger could follow it.
