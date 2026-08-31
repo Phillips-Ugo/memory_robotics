@@ -51,7 +51,7 @@ Consolidation-with-revision is the moat. Experiment X4 is the proof.
 - [x] Repo, uv environment, LeRobot installed
 - [x] Success-rate number I produced myself (`scripts/00_eval_pretrained.py` — 65% on PushT, n=20, CI [43%, 82%], 28 Aug)
 - [x] Experiment tracking set up (W&B, offline mode; `uv run wandb login` to sync online — 28 Aug)
-- [ ] Four one-page paper notes: CoRL memory-workshop page, RoboMemArena, MemER, RoboMME
+- [x] Four one-page paper notes: CoRL memory-workshop page, RoboMemArena, MemER, RoboMME (read 29–30 Aug; notes in `docs/paper-notes/` + notebook)
 - [ ] In my own words: the Problem A / Problem B distinction (blog post #1)
 - **Learn:** Python/PyTorch basics, git, running on remote GPU, LeRobot tutorial.
 - **Skip:** kinematics, control theory, ROS.

@@ -1,5 +1,42 @@
 # Research log
 
+## 2026-08-30 — Day 3: Phase 0 reading done + M2 fully scoped (no GPU rented yet)
+
+**Did (reading):** Read all four Phase 0 papers; notes in the paper-notes stubs +
+notebook. The two ideas that survived the pressure-test and will anchor blog post
+#1: (1) every open question in the workshop's list has a within-episode version
+(Problem A, what everyone works on) and a cross-episode version (Problem B, open);
+(2) RoboMemArena the *benchmark* and PrediMem the *method* are two different
+contributions in one paper — I care about the benchmark.
+
+**Did (M2 recon):** answered all four pre-rental questions in docs/phase1-plan.md.
+The findings that changed the plan:
+- RoboMemArena vendors openpi (`third_party/openpi_minimal`) with a websocket
+  policy server whose LIBERO mode defaults to the exact checkpoint we need
+  (`pi05_libero` from `gs://openpi-assets`). The eval side ships the matching
+  client + obs adapter. M2 is assembly, not integration.
+- openpi README: π₀.₅ **inference needs >8 GB VRAM** — a single RTX 4090 (the
+  cheapest mainstream rental tier), not the 24–48 GB I guessed. LoRA >22.5 GB,
+  full fine-tune >70 GB. Ubuntu 22.04 only.
+- The MemER repo cannot reproduce the benchmark's MemER number: high-level code
+  only, no sim configs, no π₀.₅ checkpoint, one single-task HF checkpoint — and
+  the authors' own materials disagree on the model size (3B page / 7B abstract /
+  4B checkpoint). RoboMemArena publishes no MemER adapter either, so nobody's
+  MemER-on-RoboMemArena setup is public. → M3 rescoped to RoboMemArena's own
+  Qwen-VL keyframe pipeline; official-MemER reproduction demoted to stretch.
+- MemER interface fact I had wrong from memory: keyframes never go to the
+  low-level policy — the VLM emits `{current_subtask, keyframe_positions}` and
+  the low level gets *language only*. The median-frame thing is per-cluster
+  dedup after single-linkage clustering, not the selection rule.
+
+**Lesson:** a "reproduce the baselines" plan is only as real as the repos behind
+it. One hour of recon (two parallel doc-reading agents + grepping the vendored
+clone) moved M2 from "rent a big box and figure it out" to a one-line serve
+command on the cheapest GPU tier, and killed an M3 that would have burned a week.
+
+**Next:** rent a 4090 (RunPod/Lambda/Vast, Ubuntu 22.04), run M2, get the first
+reproduced π₀.₅ number to compare against the paper's 21.5%.
+
 ## 2026-08-29 — Day 2: RoboMemArena harness running on the Mac (Phase 1 M1 ✓)
 
 **Did:** Got the RoboMemArena eval harness running end-to-end locally with a dummy

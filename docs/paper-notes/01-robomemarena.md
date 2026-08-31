@@ -11,17 +11,21 @@ real-world tasks; introduces PrediMem (dual-system VLA, recent + keyframe buffer
 predictive-coding head).*
 
 ## 1. What it claims
-
+That by combining keyframe annoation + symbolic language we can unlock the next level for memory enabled robotics.
 ## 2. How it measures it
 
 <!-- Task success + conditional subtask success. Get the exact baseline numbers
      (π₀.₅, MemER, PrediMem) from the paper, not from surveys. -->
+     They condition the VLA on keyframes and language
 
 ## 3. What it can't do / limitations
 
 <!-- Hint to check: everything here is WITHIN-episode (Problem A). What would it
      take to measure cross-episode memory with this setup? -->
+     In cases where we have aton of context, long memory it becomes computations expenses and hard at inference. 
 
 ## 4. What I'd test
+Test how our approach with perform over 1000+ steps 
 
 ## One-liner for the log
+Tested hybrid method for memory robot control
