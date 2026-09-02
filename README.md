@@ -31,4 +31,4 @@ uv run python scripts/00_eval_pretrained.py
 
 ## Author
 
-Belu — learning robotics in public. Progress posted on X and LinkedIn.
+Belu
