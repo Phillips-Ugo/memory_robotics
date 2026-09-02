@@ -1,5 +1,57 @@
 # Research log
 
+## 2026-09-02 — Day 4b: benchmark v0 runs — the four-curves chart exists (X2 ✓, X4 preview)
+
+**Did:** built `bench/` — the Phase 2 v0 benchmark as an abstract skill-level
+simulator (skills cost steps; hidden properties decide whether the cheap skill works),
+a hand-written planner that always recovers in-episode, the `observe()/recall()`
+memory API, three baselines (none · last-5 · retrieval) and a consolidated-KB
+prototype with a probe-after-N revision rule. 30 worlds × 50 episodes × 3 seeds ×
+4 memories runs in ~2 s on the laptop. Chart: `outputs/bench_v0/curves.png`.
+
+**Calibration (the thing v0 was for):** with step budget 30 a single failure still
+fit inside the budget (optimal 15 + jam recovery 13 = 28), so success only dropped
+when *both* secrets bit → 92–96% ceiling, curves compressed. Budget 26 makes one
+failure decide the episode → no-memory 53%, memories 82–89%. That's the memory
+dividend, tuned. Budget is now a CLI flag (`--budget`).
+
+**Results (budget 26, 90 runs per curve, pre-change = eps 15–24 with Wilson CI):**
+
+| memory | pre-change success | post-change (first 10) | stale actions after change | bytes |
+|---|---|---|---|---|
+| none | 0.53 [0.50, 0.57] | 0.54 | 0 | 0 |
+| last-5 | 0.82 [0.80, 0.85] | 0.76 | 0.6 | 647 |
+| retrieval (never forgets) | **0.89** [0.87, 0.91] | 0.81 | **3.6, growing linearly** | 6409 |
+| consolidated + probe | 0.87 [0.85, 0.89] | **0.84** | 1.2, plateaus | 280 |
+
+**What the chart says, in one paragraph:** any memory beats none within 3 episodes
+(X2 answered: yes). Before the world changes, raw retrieval is best — perfect
+retention is optimal when nothing is stale. After the change, retrieval keeps paying
+for a fact that stopped being true (stale actions grow forever; it never re-tests
+the fixed drawer because `pull_hard` never produces evidence). last-5 revises "for
+free" by forgetting, but pays a periodic re-learning tax in the static phase (0.82
+vs 0.89). The consolidated KB is second-best in both regimes and best on the sum,
+at 4% of retrieval's storage — the tunable middle of a retention-vs-revision
+trade-off that the other two sit at the extremes of.
+
+**Two design lessons for the real benchmark:**
+1. **Success is a weak revision signal** when the policy recovers in-episode; every
+   memory "recovers" in 1–2 episodes on success. Stale-action count and
+   steps-per-episode are the discriminating metrics. Keep them primary for X4.
+2. **Revision needs evidence, and robust actions produce none.** A memory that
+   always uses the safe skill can never learn the world got better. Probing (spend a
+   little to re-test) is the mechanism; its rate is the knob. This is the core
+   design problem of Phase 4, found on day one of Phase 2.
+
+**Caveats, stated plainly:** this is an abstract simulator, not robosuite — it tests
+the memory logic, not perception or control. Retrieval is token-overlap, not
+embeddings. LLM-summary baseline is a stub. The consolidated prototype is ~40 lines;
+its probe rule is hand-set. All of these are the point of v0: find the shape before
+paying for physics.
+
+**Next:** post #3 material is here (the chart). Then robosuite skills behind the same
+`SkillEnv` interface, and an LLM-planner variant so the memory context can be text.
+
 ## 2026-09-02 — Day 4: prior-work correction (RoboMME-Interference) + M2 prep + benchmark spec
 
 **Belu found the one paper that could have sunk post #1.** RoboMME-Interference

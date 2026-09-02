@@ -4,5 +4,6 @@ version = "0.1.0"
 requires-python = ">=3.11"
 dependencies = [
     "lerobot[pusht]>=0.4.4",
+    "matplotlib>=3.11.1",
     "wandb>=0.24.2",
 ]

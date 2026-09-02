@@ -73,10 +73,11 @@ Consolidation-with-revision is the moat. Experiment X4 is the proof.
 ### Phase 2 — Smallest possible cross-episode experiment (weeks 8–11)
 - [ ] One world in LIBERO or ManiSkill3, 2–3 hidden persistent properties
   (which drawer sticks, which container is heavy…), scripted-skill or VLM-planner policy
-- [ ] The four dumb baselines implemented
-- [ ] **X2:** success-vs-episode-index curves — does any memory beat none? does structure
-  beat raw retrieval?
-- [ ] Output: one chart, four curves, a hypothesis about why they differ
+- [x] Baselines: none · last-k · retrieval (token-overlap stand-in) · consolidated-KB prototype; LLM-summary still a stub (2 Sep, `bench/`)
+- [x] **X2 (v0, abstract sim):** any memory beats none within 3 episodes; retrieval best while static, consolidated best after a change event (2 Sep)
+- [x] Output: `outputs/bench_v0/curves.png` — four curves + the retention-vs-revision hypothesis (research log Day 4b)
+- [ ] Same experiment with robosuite skills behind `bench/env.SkillEnv` (real physics)
+- [ ] LLM-planner variant so memory context can be free text
 - **Learn:** one sim framework in depth, procedural task generation, LLM agent/tool-use
   patterns, embedding retrieval, the LLM-agent memory papers.
 

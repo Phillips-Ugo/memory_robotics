@@ -128,6 +128,23 @@ four dumb baselines, one chart of four curves. If any daylight shows between the
 curves, the full benchmark is worth building and the chart is a post. If none does,
 the calibration is wrong (see design rule) — fix the dividend before scaling.
 
+## v0 status (2026-09-02): built and run — `bench/`, `uv run python -m bench.run`
+
+Abstract skill-level simulator (not robosuite yet), hand-written planner, three
+baselines + consolidated prototype, 30 worlds × 50 eps × 3 seeds in ~2 s. Findings
+that feed back into this spec (details in research log, Day 4b):
+
+- **Calibration is a step budget.** Budget must make a *single* failure decide the
+  episode (v0: budget 26, optimal path 15). Otherwise the ceiling compresses curves.
+- **Success is a weak revision metric** when the policy recovers in-episode. Stale
+  actions and steps/episode are the discriminating metrics → make them primary for X4.
+- **Robust actions produce no evidence.** A memory that always plays safe can never
+  learn the world got better; revision requires probing, and the probe rate is the
+  central knob. Retrieval-never-forgets accumulates stale actions linearly forever.
+- The retention-vs-revision trade-off is real and measurable: retrieval wins static,
+  last-k wins on revision by forgetting (but pays a re-learning tax), consolidated
+  sits in the tunable middle at ~4% of retrieval's storage.
+
 ## Open questions (answer in v0)
 
 - Which sim: our existing robosuite/LIBERO fork (already running, BDDL tasks) vs
