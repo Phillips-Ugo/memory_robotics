@@ -1,5 +1,30 @@
 # Research log
 
+## 2026-09-02 — Day 4: prior-work correction (RoboMME-Interference) + M2 prep + benchmark spec
+
+**Belu found the one paper that could have sunk post #1.** RoboMME-Interference
+(arXiv 2606.22338, June 2026) is a genuinely cross-episode benchmark — sessions are
+separate episodes with resets. The post's "no benchmark for Half B. None." line was
+wrong and is now fixed everywhere (post, roadmap, benchmark spec; new note
+`paper-notes/04-robomme-interference.md`).
+
+**Why it sharpens rather than kills the thesis:** their memory is *given* (a demo
+video the query explicitly references) and their world is *static* (distractors are
+irrelevant, never conflicting). Result: 45% → 19% under 7 distractors, fully restored
+to 45% by a SigLIP visual-similarity retrieval step. Retrieval solves it because
+retrieval is all it demands — roadmap principle #4 confirmed by someone else's data.
+Their stated limitation ("depends on the query resembling its demonstration") and
+future work ("experience spread across several sessions") are our two open axes:
+earned memory and revision. Their retrieval fix becomes a mandatory baseline for X4.
+
+**Also today:** M2 code ready (`scripts/02_rma_pi05_adapter.py` load-tested in the
+harness venv, `scripts/setup_gpu_box.sh` with runbook); benchmark v0 spec written
+(`docs/benchmark-design.md`); post #1 drafted in LinkedIn + X versions.
+
+**Lesson:** "none exists" is the most dangerous sentence you can post. Say instead
+what the existing thing doesn't do — more specific, more defensible, and it forces
+you to read the thing.
+
 ## 2026-08-30 — Day 3: Phase 0 reading done + M2 fully scoped (no GPU rented yet)
 
 **Did (reading):** Read all four Phase 0 papers; notes in the paper-notes stubs +

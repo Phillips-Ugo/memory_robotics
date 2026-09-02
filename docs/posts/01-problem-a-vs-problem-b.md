@@ -24,9 +24,12 @@ manages ~38%.
 
 **Problem B — memory across episodes.** Does the robot stop repeating a mistake it
 made *last Tuesday*? Does it know this apartment's drawer sticks, that this
-customer's mug is heavier than it looks? Here's what shocked me: **there is no
-standard benchmark for this. At all.** The closest work is on the LLM-agent side
-(Voyager, MemGPT, Mem0) — not robotics.
+customer's mug is heavier than it looks? Here's what shocked me: exactly **one**
+benchmark touches this (RoboMME-Interference, June 2026) — and it hands the robot a
+demonstration video and checks whether it survives distractors. **Nobody measures
+whether a robot learns a fact from its own experience, and nobody measures what
+happens when that fact stops being true.** The rest of the closest work is on the
+LLM-agent side (Voyager, MemGPT, Mem0) — not robotics.
 
 And Problem B is the one deployment actually runs on. The facts a deployed robot
 needs change faster than any fleet retraining cycle — they're local, mutable,
@@ -45,6 +48,41 @@ Next post: the silent bug that made a pretrained policy score 0% — and what it
 taught me about never trusting a network's inputs.
 
 ---
+
+## X version (chosen hook: contrarian; each paragraph = one tweet if threaded)
+
+Figure is spending $1B on robot data. Almost none of it will be remembered.
+
+Not a knock on Figure — it's a gap in the whole field. Spent the week reading every
+robot-memory paper I could find (RoboMemArena, RoboMME, MemER), and they all solve
+the same half of the problem.
+
+Half A: memory within a task. Did the robot remember which cup it filled 800 steps
+ago? Real benchmarks, real leaderboards. Frontier VLAs like π₀.₅ score ~21% on them.
+Hard, but crowded.
+
+Half B: memory across tasks. Does the robot stop jamming the same sticky drawer it
+jammed yesterday? Does it know *this* apartment's mug is heavy?
+
+Exactly one benchmark touches Half B (RoboMME-Interference, June 2026) — and it
+hands the robot a demo video and checks if it survives distractors. Nobody tests
+whether a robot learns a fact from its *own* experience. And nobody tests what
+happens when the fact stops being true.
+
+And Half B is what deployment actually runs on. "This drawer sticks" is local,
+changes weekly, and is private to one customer — it can't live in the model weights.
+It needs a memory layer that stores, retrieves, and — the hard part — revises when
+the drawer gets fixed.
+
+So that's what I'm building: the benchmark that measures cross-episode memory, then
+the library that passes it.
+
+I'm a beginner learning this stack end to end and posting everything. Receipts so
+far: first VLA eval (65% on PushT, n=20 — plus a lesson in why you always report a
+confidence interval) and a memory benchmark's full eval harness running on my
+MacBook.
+
+Next: the silent bug that made a pretrained policy score 0%.
 
 ## Queue
 

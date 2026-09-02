@@ -10,6 +10,26 @@ secrets**: hidden, persistent properties that no single episode reveals for free
 that a robot with working memory exploits on the next visit. **The score is not
 success on any episode — it is the shape of the curve across episodes.**
 
+## Positioning vs. the one existing cross-episode benchmark
+
+RoboMME-Interference (June 2026, `paper-notes/04-robomme-interference.md`) is
+cross-episode but tests one axis only: **interference** (k irrelevant sessions between
+a given demonstration and the query). Its memory is *given* (a demo video the query
+references) and its world is *static*, so a retrieval-only fix solves it completely
+(45% → 19% under interference, back to 45% with SigLIP retrieval).
+
+Ours differs on the two axes it leaves open, and reuses its third:
+
+| Axis | RoboMME-Interference | Ours |
+|---|---|---|
+| Where memory comes from | handed a demonstration | **earned** through the robot's own success/failure |
+| Does the world change | never | **yes** — change events, recovery + stale-action metrics |
+| Interference | k ∈ {0,1,3,7} irrelevant sessions | reuse as a dimension (Phase 3) |
+
+Their retrieval fix is therefore a **mandatory baseline** for us: it should match the
+consolidated-KB approach while the world is static and fall behind at the first
+change event. That comparison is X4's headline chart.
+
 ## Components
 
 ### 1. World generator

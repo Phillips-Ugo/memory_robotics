@@ -16,9 +16,14 @@
   strong baselines (π₀.₅ ~21.5%, MemER ~27.3%, PrediMem ~38.5% on RoboMemArena).
   *Use it to learn the VLA stack, not as the main target.*
 - **Problem B — cross-episode memory.** Does the robot stop repeating a mistake it made
-  last week? Immature: no standard robotics benchmark exists. Closest prior work is
-  LLM-agent memory (Voyager, Reflexion, Generative Agents, MemGPT/Letta, Mem0) and
-  MemER's retrieval. **This is the target — a new entrant can define the frontier here.**
+  last week? Immature. The one existing cross-episode benchmark, RoboMME-Interference
+  (June 2026, `docs/paper-notes/04-robomme-interference.md`), hands the robot a
+  demonstration and inserts *irrelevant* sessions before the query — memory is given,
+  not earned, and nothing ever changes, so a retrieval-only fix fully solves it.
+  Nobody measures **experiential** memory (facts the robot earns by acting) or
+  **revision** (facts that stop being true). Other prior work is LLM-agent memory
+  (Voyager, Reflexion, Generative Agents, MemGPT/Letta, Mem0).
+  **This is the target — a new entrant can define the frontier here.**
 
 ## Why this survives the "models will eat it" bear case
 
