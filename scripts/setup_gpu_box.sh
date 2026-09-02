@@ -19,6 +19,13 @@ apt-get install -y -qq git curl ffmpeg libegl1 libgl1 libosmesa6 tmux > /dev/nul
 # ---- uv --------------------------------------------------------------------
 command -v uv > /dev/null || curl -LsSf https://astral.sh/uv/install.sh | sh
 export PATH="$HOME/.local/bin:$PATH"
+# openpi caches the checkpoint (several GB) under ~/.cache by default — on RunPod that is
+# the small container disk. Keep it on the /workspace volume, for this shell and future ones.
+export OPENPI_DATA_HOME=/workspace/openpi_cache
+grep -q OPENPI_DATA_HOME ~/.bashrc 2>/dev/null || cat >> ~/.bashrc <<'RC'
+export PATH="$HOME/.local/bin:$PATH"
+export OPENPI_DATA_HOME=/workspace/openpi_cache
+RC
 
 # ---- A) openpi server env (official repo; serves pi05_libero) --------------
 [ -d vendor/openpi ] || git clone https://github.com/Physical-Intelligence/openpi vendor/openpi
@@ -41,8 +48,10 @@ cat <<EOF
 
 Done. M2 runbook (use tmux so nothing dies with your ssh session):
 
-  # pane 1 — policy server (first run downloads the pi05_libero checkpoint):
-  cd $REPO_ROOT/vendor/openpi && uv run scripts/serve_policy.py --env LIBERO
+  # (new shells: source ~/.bashrc first so uv and OPENPI_DATA_HOME are set)
+  # pane 1 — policy server (first run downloads the pi05_libero checkpoint to /workspace):
+  cd $REPO_ROOT/vendor/openpi && nohup uv run scripts/serve_policy.py --env LIBERO > $REPO_ROOT/server.log 2>&1 &
+  tail -f $REPO_ROOT/server.log      # until it reports listening on :8000
 
   # pane 2 — smoke test (1 trial, then scale up):
   cd $REPO_ROOT/vendor/RoboMemArena/evaluation_benchmark
