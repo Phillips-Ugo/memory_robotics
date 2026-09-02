@@ -23,7 +23,10 @@
    adapter contract before any big model is involved. (Can start on the Mac;
    MuJoCo runs on CPU.)
 2. **M2 — π₀.₅ inference:** run the pretrained reactive baseline through the
-   harness on a rented GPU. First reproduced number.
+   harness on a rented GPU. First reproduced number. **Code ready (2026-09-02):**
+   `scripts/02_rma_pi05_adapter.py` (websocket adapter, load-tested locally) +
+   `scripts/setup_gpu_box.sh` (Ubuntu 22.04 box setup + runbook). Remaining:
+   rent the box, run it.
 3. **M3 — keyframe-memory VLA inference (rescoped 2026-08-30):** run RoboMemArena's
    own shipped Qwen-VL + keyframe + π₀.₅ reference pipeline — it's the only
    VLM+keyframe baseline that exists as runnable code. Reproducing *official*
