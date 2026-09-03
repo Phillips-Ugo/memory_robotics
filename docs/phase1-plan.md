@@ -25,8 +25,15 @@
 2. **M2 — π₀.₅ inference:** run the pretrained reactive baseline through the
    harness on a rented GPU. First reproduced number. **Code ready (2026-09-02):**
    `scripts/02_rma_pi05_adapter.py` (websocket adapter, load-tested locally) +
-   `scripts/setup_gpu_box.sh` (Ubuntu 22.04 box setup + runbook). Remaining:
-   rent the box, run it.
+   `scripts/setup_gpu_box.sh` (Ubuntu 22.04 box setup + runbook).
+   **Ran 2026-09-03: pipeline works end to end; stock `pi05_libero` scores 0/51 on
+   task 1 (CSR 0%) — zero-shot transfer to RoboMemArena's scenes is nil.** The
+   paper's baseline is (almost certainly) π₀.₅ fine-tuned on the RoboMemArena
+   dataset, which the repo does not ship as a checkpoint. → New sub-milestone
+   **M2b: LoRA-fine-tune π₀.₅ on RoboMemArena data with openpi**, then re-run.
+   Needs: dataset download + RLDS/LeRobot conversion (repo has the builder),
+   an openpi train config, a ≥24 GB card for hours not minutes (A6000/A100 safer
+   than 4090 at >22.5 GB). Scope this before renting again.
 3. **M3 — keyframe-memory VLA inference (rescoped 2026-08-30):** run RoboMemArena's
    own shipped Qwen-VL + keyframe + π₀.₅ reference pipeline — it's the only
    VLM+keyframe baseline that exists as runnable code. Reproducing *official*

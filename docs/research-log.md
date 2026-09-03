@@ -5,8 +5,27 @@
 **Did:** first paid GPU session (RunPod, RTX 4090, ~2.5 h). π₀.₅ (`pi05_libero`)
 served by openpi over a websocket, RoboMemArena harness driving it through
 `scripts/02_rma_pi05_adapter.py`. Full round-trip confirmed: connect → first
-inference → 63 s episode with stage scoring + videos. Then launched the official
-task-1 protocol (51 trials, seed 50) — result recorded below when it finished.
+inference → 63 s episodes at the full 2500-step horizon (verified: 2500 video
+frames), stage scoring + videos.
+
+**Result (official task-1 protocol, 51 trials, seed 50): TSR 0/51, CSR 0.0%.**
+Not one first stage (cookies into basket) completed. Diagnostics from the adapter:
+the policy *is* acting — mean |delta-pose| 0.05–0.2 per step, gripper toggling, end
+effector wandering across the workspace — and a 3-trial test with the images
+mirrored (openpi's LIBERO example rotates 180°, the harness only flips vertically)
+fails identically. Inputs match openpi's LIBERO contract (256×256 images, 8-dim
+state = eef pos + axis-angle + 2 gripper joints).
+
+**Interpretation:** the stock `pi05_libero` checkpoint is fine-tuned on the original
+LIBERO suites; RoboMemArena's scenes, 2500-step horizon and two-part prompts are out
+of distribution and it flails. The paper's ~21.5% π₀.₅ baseline is almost certainly
+π₀.₅ *fine-tuned on RoboMemArena's own dataset* — consistent with the repo shipping
+training data + a pointer to openpi's training code, and no checkpoint. To verify
+against the paper text next session. **So "reproduce the baseline" = fine-tune first**
+(LoRA, >22.5 GB per openpi → borderline on a 4090, comfortable on an A6000/A100),
+which is a bigger step than planned. Zero-shot 0/51 is itself a publishable data
+point: a frontier VLA fine-tuned for one LIBERO distribution transfers nothing to a
+neighbouring one.
 
 **Everything that went wrong, in order (all fixed in the repo now):**
 1. `uv` not on PATH in a fresh shell → persisted in `~/.bashrc` by the setup script.
@@ -28,7 +47,7 @@ task-1 protocol (51 trials, seed 50) — result recorded below when it finished.
    ping timeout`. RoboMemArena's own reference eval has a `StableWebsocketClientPolicy`
    for exactly this; adapter now disables pings the same way.
 
-**Cost so far:** ~2 h of 4090 ≈ $1–2 plus the download detours. The dead-man's
+**Cost:** ~3 h of 4090 (~$1–2 at Community rates) including the download detours. The dead-man's
 switch (`sleep 7200; runpodctl stop pod`) is now standard; reset it before any batch.
 
 **Lesson:** on rented boxes, *disk layout* is the first thing to check, not the GPU.

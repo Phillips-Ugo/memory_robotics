@@ -62,8 +62,8 @@ Consolidation-with-revision is the moat. Experiment X4 is the proof.
 - **Skip:** kinematics, control theory, ROS.
 
 ### Phase 1 — Reproduce the frontier on Problem A (weeks 3–7)
-- [ ] RoboMemArena running on cloud GPU
-- [ ] Reproduce π₀.₅ reactive baseline and MemER (both have code)
+- [x] RoboMemArena running on cloud GPU with π₀.₅ served by openpi (3 Sep; stock checkpoint scores 0/51 zero-shot — see log Day 5)
+- [ ] Reproduce π₀.₅ reactive baseline — requires fine-tuning on RoboMemArena data first (M2b); MemER official repo can't reproduce it (see phase1-plan)
 - [ ] Probes: shrink/grow keyframe bank, add distractors, find where memory *hurts* (**X1**)
 - [ ] Public write-up: "I reproduced two memory-VLA baselines; here is exactly where they break"
 - **Learn:** behavior cloning and its failures, diffusion/flow policies (inputs/outputs level),
