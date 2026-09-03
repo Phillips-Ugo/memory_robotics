@@ -1,5 +1,40 @@
 # Research log
 
+## 2026-09-03 — Day 5: M2 — π₀.₅ running inside RoboMemArena on a rented 4090
+
+**Did:** first paid GPU session (RunPod, RTX 4090, ~2.5 h). π₀.₅ (`pi05_libero`)
+served by openpi over a websocket, RoboMemArena harness driving it through
+`scripts/02_rma_pi05_adapter.py`. Full round-trip confirmed: connect → first
+inference → 63 s episode with stage scoring + videos. Then launched the official
+task-1 protocol (51 trials, seed 50) — result recorded below when it finished.
+
+**Everything that went wrong, in order (all fixed in the repo now):**
+1. `uv` not on PATH in a fresh shell → persisted in `~/.bashrc` by the setup script.
+2. **Checkpoint download filled the wrong disk.** RunPod pods have a small container
+   disk (`/`, 20 GB) and a volume (`/workspace`, 60 GB); openpi caches under
+   `~/.cache` = container disk. 11.6 GB checkpoint → `No space left on device`, and
+   the *symptom* was an unrelated-looking TensorStore `OUT_OF_RANGE` byte-range
+   error from the truncated file. Fix: `OPENPI_DATA_HOME=/workspace/openpi_cache`.
+   Also `uv cache clean` freed 14 GB of wheel cache from the container disk.
+3. **gcsfs stalls silently near the end of large objects** on this box (twice, at
+   ~95% of a file), and restarting openpi's downloader *appends* to the partial
+   files → 23 GB "checkpoint" with one shard truncated and others doubled. Wrote
+   `scripts/download_pi05.py`: list via gcsfs, move bytes with `curl` over plain
+   HTTPS (`storage.googleapis.com` serves the public bucket) with resume and a
+   stall timeout, verify every file's size. The "stuck" 2.18 GB shard was actually
+   complete — curl finished it in 2 s. openpi accepts the directory as cached.
+4. **First inference kills the websocket.** JAX/XLA compiles on the first request
+   (30–90 s); the client's default 20 s keepalive ping times out → `1011 keepalive
+   ping timeout`. RoboMemArena's own reference eval has a `StableWebsocketClientPolicy`
+   for exactly this; adapter now disables pings the same way.
+
+**Cost so far:** ~2 h of 4090 ≈ $1–2 plus the download detours. The dead-man's
+switch (`sleep 7200; runpodctl stop pod`) is now standard; reset it before any batch.
+
+**Lesson:** on rented boxes, *disk layout* is the first thing to check, not the GPU.
+And "the download is stuck at 95%" and "the download is done but the call never
+returned" look identical from the log — check bytes on disk, not progress bars.
+
 ## 2026-09-02 — Day 4b: benchmark v0 runs — the four-curves chart exists (X2 ✓, X4 preview)
 
 **Did:** built `bench/` — the Phase 2 v0 benchmark as an abstract skill-level

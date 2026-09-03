@@ -81,7 +81,12 @@ class Pi05WebsocketAdapter(BasePolicyAdapter):
     def __init__(self, host: str | None = None, port: int | None = None) -> None:
         self.host = host or os.environ.get("PI05_HOST", "localhost")
         self.port = int(port or os.environ.get("PI05_PORT", "8000"))
+        # The harness flips images vertically (its own data-recorder convention);
+        # openpi's LIBERO example rotates 180°. PI05_FLIPLR=1 adds the missing
+        # horizontal flip so the stock pi05_libero checkpoint sees its training view.
+        self.fliplr = os.environ.get("PI05_FLIPLR", "0") == "1"
         self._client = None  # connect lazily so adapter load doesn't block
+        self._calls = 0
 
     def _ensure_client(self):
         if self._client is None:
@@ -91,19 +96,32 @@ class Pi05WebsocketAdapter(BasePolicyAdapter):
         return self._client
 
     def reset(self) -> None:
+        self._calls = 0
         client = self._client
         if client is not None and hasattr(client, "reset"):
             client.reset()
 
     def infer_actions(self, obs: dict[str, Any], prompt: str, resize_size: int) -> np.ndarray:
+        img, wrist = obs["observation/image"], obs["observation/wrist_image"]
+        if self.fliplr:
+            img, wrist = np.ascontiguousarray(img[:, ::-1]), np.ascontiguousarray(wrist[:, ::-1])
+        state = np.asarray(obs["observation/state"], dtype=np.float32)
         element = {
-            "observation/image": obs["observation/image"],
-            "observation/wrist_image": obs["observation/wrist_image"],
-            "observation/state": np.asarray(obs["observation/state"], dtype=np.float32),
+            "observation/image": img,
+            "observation/wrist_image": wrist,
+            "observation/state": state,
             "prompt": str(prompt),
         }
-        actions = self._ensure_client().infer(element)["actions"]
-        return np.asarray(actions, dtype=np.float32)
+        actions = np.asarray(self._ensure_client().infer(element)["actions"], dtype=np.float32)
+        self._calls += 1
+        if self._calls in (1, 50, 150):  # diagnostic: is the policy commanding motion at all?
+            print(
+                f"[pi05-adapter] call {self._calls}: img{img.shape} state={np.round(state, 3)} "
+                f"chunk{actions.shape} mean|a[:6]|={np.abs(actions[:, :6]).mean():.3f} "
+                f"grip={actions[:, 6].mean():+.2f}",
+                flush=True,
+            )
+        return actions
 
 
 def build_adapter(**kwargs: Any) -> "BasePolicyAdapter":
