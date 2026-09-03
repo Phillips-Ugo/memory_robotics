@@ -233,6 +233,10 @@ class SimSkillEnv:
             self._step(a)
 
     def _record(self, skill: str, target: str, outcome: str, steps: int) -> SkillEvent:
+        # a skill cut off by the step budget is not evidence of anything: don't let a
+        # budget timeout masquerade as a jam/drop in the memories' episode logs
+        if outcome != "ok" and self.log.steps > self.step_budget:
+            outcome = "timeout"
         ev = SkillEvent(skill, target, outcome, steps)
         self.log.events.append(ev)
         return ev

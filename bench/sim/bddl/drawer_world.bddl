@@ -27,7 +27,7 @@
       (obj_b_init_region
           (:target kitchen_table)
           (:ranges (
-              (0.10 -0.24 0.14 -0.20)
+              (-0.03 -0.21 0.01 -0.17)
             )
           )
           (:yaw_rotation (
