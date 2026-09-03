@@ -44,6 +44,46 @@
    purpose, per task category. The write-up material.
 5. (Only if needed) fine-tuning — avoid until inference-only reproduction works.
 
+## M2b — fine-tune π₀.₅ on RoboMemArena task 1 (scoped 2026-09-03)
+
+**What the paper's baseline actually is** (not in the paper text — it's in code:
+`third_party/openpi_minimal/.../training/config.py`, `_PI05_ROBOMEMARENA_TRAINING_DETAILS`):
+π₀.₅ initialized from **`pi05_base`**, **full** fine-tune, **batch 128, 40k steps**,
+AdamW, cosine LR peak 5e-5 (10k warmup), EMA 0.999, `prompt_from_task=True`, on
+subtask segments whose instruction is the primitive from the filename ("pick
+cookies"). Paper: 100 auto-generated (AnyGrasp) demos per task × 26 tasks, ~1,076
+steps each, 15,100 keyframe segments; 4×H100. The paper does **not** state how the
+reactive baseline is prompted at eval (full two-part instruction vs. primitives).
+Category result for task 1's group (Transferring): **π₀.₅ 20.0% TSR / 42.8% CSR**;
+overall 21.5% / 38.7%. No per-task table.
+
+**Verdict:** a like-for-like reproduction (1 TB data, batch-128 full fine-tune on
+4×H100) is out of budget. The honest affordable version is a **task-1 specialist**:
+
+| Step | Tool (all in repo) | Est. |
+|---|---|---|
+| Download task 1 subtask data (27 GB, 400 files) | `scripts/download_rma_data.py --tasks 1` | ~10 min |
+| HDF5 → LeRobot (~100k frames × 2 cams) | `scripts/convert_rma_to_lerobot.py` | ~30 min |
+| Register LoRA config `pi05_rma_lora` | `scripts/patch_openpi_config.py` | seconds |
+| Norm stats | `uv run scripts/compute_norm_stats.py --config-name pi05_rma_lora` | minutes |
+| LoRA train: init `pi05_libero`, batch 16, 8k steps (~1.2 epochs) | `XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 uv run scripts/train.py pi05_rma_lora --exp-name t1 --overwrite` | 1–3 h (step time unknown; measure first 100 steps) |
+| Serve + eval task 1, 51 trials | `serve_policy.py policy:checkpoint --policy.config=pi05_rma_lora --policy.dir=checkpoints/pi05_rma_lora/t1/8000` + M2 command | ~1 h |
+
+Card: openpi says LoRA needs >22.5 GB → a 4090 is borderline at batch 16; rent an
+**A6000 48 GB (~$0.5/h) or A100 80 GB (~$1.5/h)**. Whole M2b ≈ $5–10. Disk: ≥120 GB
+volume (27 GB raw + ~30 GB LeRobot + 12 GB checkpoint + LoRA checkpoints).
+
+**Claims this can and can't support:** it answers "does a fine-tuned π₀.₅ get off
+zero on RoboMemArena task 1?" and gives an X1-ready policy to probe. It is *not*
+the paper's number (specialist vs. 26-task generalist, LoRA vs. full, 1 vs. ~5
+epochs) — report it as such. Eval with the full two-part prompt (reactive baseline);
+primitive-prompting is M3's job (VLM planner).
+
+**Caveats to check before renting:** (1) HF mirror may still be pre-June-20 for
+tasks 1–3 (scene changed to two baskets) — compare against ModelScope or use task 4+
+if so; (2) `Pi0Config(pi05=True, paligemma_variant="gemma_2b_lora", ...)` is
+openpi's LoRA recipe written for π₀ — smoke-test 20 train steps before committing hours.
+
 ## GPU budget (verified against openpi README, 2026-08-30)
 
 | Workload | VRAM (openpi README) | Card to rent |

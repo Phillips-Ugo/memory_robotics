@@ -64,7 +64,19 @@ Done. M2 runbook (use tmux so nothing dies with your ssh session):
       --video-out-path $REPO_ROOT/outputs/rma_pi05_smoke
 
   # official protocol for the real number: 51 trials/task, seed 50, max 2500 steps
-  # (paper baseline to beat/match: pi-0.5 ~21.5% avg TSR / see paper table for CSR)
+  # (paper: pi-0.5 20.0% TSR / 42.8% CSR on task 1's category; stock checkpoint = 0/51)
+
+M2b runbook — LoRA fine-tune on task 1 (needs >=40 GB VRAM, >=120 GB volume; see docs/phase1-plan.md):
+  cd $REPO_ROOT/vendor/openpi
+  uv run python $REPO_ROOT/scripts/download_rma_data.py --tasks 1 --out /workspace/rma_data
+  uv run python $REPO_ROOT/scripts/convert_rma_to_lerobot.py --data-root /workspace/rma_data --repo-id belu/rma_task1
+  (cd $REPO_ROOT && python3 scripts/patch_openpi_config.py --repo-id belu/rma_task1)
+  uv run scripts/compute_norm_stats.py --config-name pi05_rma_lora
+  # smoke: 20 steps, then the real run in the background
+  XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 uv run scripts/train.py pi05_rma_lora --exp-name smoke --overwrite --num-train-steps 20
+  XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 nohup uv run scripts/train.py pi05_rma_lora --exp-name t1 --overwrite > $REPO_ROOT/train_t1.log 2>&1 &
+  # then serve the fine-tuned checkpoint instead of --env LIBERO:
+  uv run scripts/serve_policy.py policy:checkpoint --policy.config=pi05_rma_lora --policy.dir=checkpoints/pi05_rma_lora/t1/8000
 
 If MUJOCO_GL=egl fails on the box's driver stack, fall back to MUJOCO_GL=osmesa
 (slower, CPU rendering — fine for a smoke test, not for 51-trial runs).

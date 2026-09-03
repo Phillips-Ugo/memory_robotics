@@ -1,5 +1,26 @@
 # Research log
 
+## 2026-09-03 — Day 5b: M2b scoped — what "reproduce the π₀.₅ baseline" really costs
+
+**Found the baseline's recipe in code, not in the paper.** RoboMemArena's vendored
+openpi config carries `_PI05_ROBOMEMARENA_TRAINING_DETAILS`: init from `pi05_base`,
+*full* fine-tune, batch 128, 40k steps, cosine LR 5e-5, EMA 0.999, trained on
+subtask segments with primitive instructions parsed from filenames ("pick cookies").
+The paper itself states none of this (nor how the reactive baseline is prompted at
+eval), only category results: task 1's group (Transferring) = 20.0% TSR / 42.8% CSR.
+Dataset: 1 TB on HF, 26 tasks × 100 AnyGrasp-generated demos, ~1,076 steps each.
+
+**Decision:** like-for-like is out of budget (4×H100 territory). M2b = a *task-1
+specialist*: 27 GB of data, HDF5→LeRobot converter, openpi's LoRA recipe applied to
+π₀.₅ (init `pi05_libero`, batch 16, 8k steps), eval task 1 with the full prompt.
+≈ $5–10 on an A6000/A100. Reported as what it is — not the paper's number. All
+scripts written and load-tested where possible (converter, config patch, data
+download, runbook in setup_gpu_box.sh); openpi's LoRA path is π₀-documented, so
+the first 20 training steps are the real test.
+
+**Lesson:** "the baseline has code" ≠ "the baseline is reproducible." Check the
+training recipe *and* its compute before promising a number.
+
 ## 2026-09-03 — Day 5: M2 — π₀.₅ running inside RoboMemArena on a rented 4090
 
 **Did:** first paid GPU session (RunPod, RTX 4090, ~2.5 h). π₀.₅ (`pi05_libero`)
