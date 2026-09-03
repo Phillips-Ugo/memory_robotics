@@ -58,10 +58,10 @@ OPEN_DIR_LOCAL = np.array([0.0, -1.0, 0.0])
 HOOK_OFFSET = {"top": (0.05, 0.0), "middle": (0.05, 0.0), "bottom": (0.06, 0.04)}
 
 STICKY_FRICTIONLOSS = 40.0
-HEAVY_MASS = 1.5  # kg -> ~15 N on the grasp; the default boxes load it with ~0.1 N
+HEAVY_MASS = 0.5  # kg -> ~5 N on the grasp; default boxes ~0.1 N. Heavier made the firm carry physically slow (controller sags)
 GENTLE_LIMIT = 20.0  # N (measured: normal drawer needs 1-4 N sustained, sticky ~32 N)
 FIRM_LIMIT = 80.0  # N
-GRIP_LIGHT_LIMIT = 10.0  # N: light grip breaks under the heavy object (~15 N), holds the light ones
+GRIP_LIGHT_LIMIT = 3.0  # N: light grip breaks under the heavy object (~5 N), holds the light ones (~0.1 N)
 REACH = 0.035  # m: max eef-to-target distance for the magnetic grasp to engage
 
 
@@ -75,14 +75,15 @@ class SimSkillEnv:
     """Same surface as bench.env.SkillEnv, backed by MuJoCo."""
 
     def __init__(self, props: SimProps, task: Task, episode_idx: int, step_budget: int = 700,
-                 render: bool = False, seed: int = 0) -> None:
+                 render: bool = False, seed: int = 0, cam_size: int = 128, render_every: int = 3) -> None:
+        self.render_every = render_every
         self.props, self.task = props, task
         self.step_budget = step_budget
         self.log = EpisodeLog(episode_idx=episode_idx, task=task)
         self.done = False
         self.frames: list[np.ndarray] = []
         self.render = render
-        self.env = OffScreenRenderEnv(bddl_file_name=str(BDDL), camera_heights=128, camera_widths=128,
+        self.env = OffScreenRenderEnv(bddl_file_name=str(BDDL), camera_heights=cam_size, camera_widths=cam_size,
                                       horizon=20000)  # robosuite's default 1000-step horizon would cut long episodes
         self.env.seed(seed)
         self.obs = self.env.reset()
@@ -207,7 +208,7 @@ class SimSkillEnv:
         self.log.steps += 1
         if self._active_eq is not None and self._weld_force() > self._limit:
             self._detach()  # grasp broke
-        if self.render and self.log.steps % 3 == 0:
+        if self.render and self.log.steps % self.render_every == 0:
             self.frames.append(self.obs["agentview_image"][::-1].copy())
         if self.log.steps > self.step_budget:
             self.done = True
@@ -245,7 +246,7 @@ class SimSkillEnv:
         hook = handle + open_dir * front + np.array([0, 0, up])
         self._move(hook + np.array([0, 0, 0.10]), grip=1.0, max_steps=150)
         self._move(hook, grip=1.0, max_steps=120, tol=0.008)
-        self._hold(1.0, 80 if firm else 6)  # close; firm = brace (the robust skill costs more)
+        self._hold(1.0, 30 if firm else 6)  # close; firm = brace (robust costs more, but less than a failure)
         if np.linalg.norm(self._eef() - hook) > REACH:
             return 0.0
         self._attach(DRAWER_BODY[drawer], FIRM_LIMIT if firm else GENTLE_LIMIT)
@@ -275,7 +276,7 @@ class SimSkillEnv:
         grasp = p + np.array([0, 0, 0.02])
         self._move(grasp + np.array([0, 0, 0.12]), grip=-1.0, max_steps=150)
         self._move(grasp, grip=-1.0, max_steps=80, tol=0.008)
-        self._hold(1.0, 40 if firm else 6)  # close; firm = brace (costs more)
+        self._hold(1.0, 30 if firm else 6)  # close; firm = brace (costs more, but less than a drop)
         if np.linalg.norm(self._eef() - grasp) > REACH:
             return 0.0
         self._attach(OBJ_BODY[obj], FIRM_LIMIT if firm else GRIP_LIGHT_LIMIT)
@@ -327,7 +328,7 @@ class SimSkillEnv:
         r = self._drawer_region_world(drawer)
         # inside the drawer's exposed section: within its width in x, near the release
         # spot in y (front-to-back), on the floor, and the drawer actually open
-        inside = (abs(p[0] - spot[0]) < 0.09 and abs(p[1] - spot[1]) < 0.06 and abs(p[2] - floor_z) < 0.06
+        inside = (abs(p[0] - spot[0]) < 0.10 and abs(p[1] - spot[1]) < 0.07 and abs(p[2] - floor_z) < 0.06
                   and self._drawer_qpos(drawer) < -0.08)
         self.log.success = bool(inside and drawer == self.task.drawer and self.log.steps <= self.step_budget)
         self.done = True

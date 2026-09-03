@@ -1,5 +1,42 @@
 # Research log
 
+## 2026-09-03 — Day 6: the benchmark gets physics (Phase 2 v0.5)
+
+**Did:** rebuilt the v0 benchmark's skill environment on real physics — a
+LIBERO/robosuite scene (Panda, 3-drawer cabinet, 3 box objects) from our own BDDL
+file, with the *same* skill interface as the abstract env, so the planner and all
+four memory baselines run unchanged (`bench/sim/`). 13.6 ms/step; episodes 5–12 s.
+Hidden properties are now physical: sticky drawer = 40 N joint friction; heavy
+object = 0.5 kg (light boxes are ~0.01 kg). Calibration matrix (108 episodes, 9
+tasks × 4 secret combos × 3 belief states) runs in ~19 min. Video:
+`outputs/sim_videos/` — same world with and without memory (1179 vs 922 steps).
+
+**What I learned building it (each a post):**
+1. **The Panda can't grab this cabinet's handles.** The handle slot is 1.6 cm deep;
+   the closed fingertips are ~1.7 cm. Hours of grasp tuning would test nothing
+   about memory. Decision: a *magnetic grasp* (MuJoCo weld constraint) with a
+   **force limit** — gentle hook 20 N / light grip 3 N / firm 80 N. The secrets stay
+   physical (measured: normal drawer needs 1–4 N sustained, sticky ~32 N; light
+   object loads the grasp at 0.1 N, heavy at ~5 N). Documented simplification, not
+   a hidden one. Also needed: a 90° gripper yaw so the wide hand clears the handle
+   above the one it's grabbing; the bottom drawer needs a higher hook point.
+2. **"Robust" skills must cost less than failing.** My first firm skills braced for
+   80 steps and knowing a secret cost *more* than failing and recovering — the
+   benchmark would have rewarded ignorance. Now: pull_hard +100 vs jam-recovery
+   +225; pick_firm +47 vs drop-recovery +111. The v0 abstract ratio (~1.5–2×), rediscovered.
+3. **Heavy is slow.** At 1–1.5 kg the arm's force limit makes the firm carry
+   physically twice as slow, so knowing "heavy" saved almost nothing. 0.5 kg keeps
+   the carry near normal speed and the light grip still fails 30× over margin.
+4. **Budgets must be task-relative and additive.** Task lengths vary 350–620 steps
+   (near object into top drawer vs far object into bottom), while robust extras
+   are ~constant, so budget = nominal(task) + slack, not a multiplier. Slack 175
+   makes a jam decisive and a drop survivable — same regime as v0, where success
+   curves were driven by jams and drops showed up in steps.
+
+**Next:** run X2 in physics (5 worlds × 30 episodes × 4 memories ≈ 1.5 h) and compare
+the four curves to the abstract ones. If the shape holds, the abstract sim earned
+its keep as the fast calibration tool.
+
 ## 2026-09-03 — Day 5b: M2b scoped — what "reproduce the π₀.₅ baseline" really costs
 
 **Found the baseline's recipe in code, not in the paper.** RoboMemArena's vendored

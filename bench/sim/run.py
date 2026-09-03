@@ -1,7 +1,7 @@
 """Experiment X2 in physics: the abstract benchmark's protocol with SimSkillEnv.
 
     MUJOCO_GL=glfw caffeinate -i vendor/rma-venv/bin/python -m bench.sim.run \
-        --worlds 5 --episodes 30 --seeds 1 --change-at 15 --budget <from calibrate>
+        --worlds 5 --episodes 30 --seeds 1 --change-at 15 --budget-slack 175
 
 Episodes are ~5-10 s each, so results stream to outputs/bench_sim/episodes.jsonl
 (resumable: finished (memory, seed, world) sequences are skipped on re-run) and the
@@ -15,6 +15,8 @@ import json
 import time
 from pathlib import Path
 
+import re
+
 from ..memory import BASELINES
 from ..planner import run_planner
 from ..run import plot, summarize
@@ -22,7 +24,19 @@ from ..world import make_world
 from .skill_env import DRAWERS, OBJECTS, SimProps, SimSkillEnv
 
 
-def run_sequence(memory, world_id: int, seed: int, episodes: int, change_at: int, budget: int, log_f) -> dict:
+def load_nominal_steps(calib_log: str) -> dict[tuple[str, str], int]:
+    """No-secret, no-belief step count per (object, drawer) from a calibrate.py log."""
+    nominal = {}
+    for line in Path(calib_log).read_text().splitlines():
+        m = re.match(r"(\S+)\s+(\S+)\s+sticky=0 heavy=0 belief=none\s+steps=\s*(\d+)", line)
+        if m:
+            nominal[(m[1], m[2])] = int(m[3])
+    if not nominal:
+        raise SystemExit(f"no nominal rows in {calib_log}")
+    return nominal
+
+
+def run_sequence(memory, world_id: int, seed: int, episodes: int, change_at: int, budget, log_f) -> dict:
     world = make_world(world_id, seed, drawers=tuple(DRAWERS), objects=tuple(OBJECTS))
     rows = []
     for ep in range(episodes):
@@ -30,14 +44,15 @@ def run_sequence(memory, world_id: int, seed: int, episodes: int, change_at: int
             world.apply_change_event()
         task = world.sample_task()
         beliefs = memory.recall(task, initial_obs={"task": task.text})
+        step_budget = budget(task) if callable(budget) else budget
         env = SimSkillEnv(SimProps(world.props.sticky_drawer, world.props.heavy_object), task, ep,
-                          step_budget=budget, seed=seed * 1000 + world_id * 100 + ep)
+                          step_budget=step_budget, seed=seed * 1000 + world_id * 100 + ep)
         t0 = time.time()
         run_planner(env, beliefs)
         memory.observe(env.log)
         row = {
             "memory": memory.name, "seed": seed, "world": world_id, "ep": ep,
-            "success": int(env.log.success), "steps": env.log.steps, "stale": env.log.stale_actions,
+            "success": int(env.log.success), "steps": env.log.steps, "budget": step_budget, "stale": env.log.stale_actions,
             "failures": sum(e.outcome in ("jam", "drop") for e in env.log.events),
             "task": task.text, "props": [world.props.sticky_drawer, world.props.heavy_object],
             "events": [f"{e.skill}({e.target})->{e.outcome}" for e in env.log.events],
@@ -58,10 +73,17 @@ def main() -> None:
     ap.add_argument("--episodes", type=int, default=30)
     ap.add_argument("--seeds", type=int, default=1)
     ap.add_argument("--change-at", type=int, default=15)
-    ap.add_argument("--budget", type=int, required=True)
+    ap.add_argument("--budget-slack", type=int, default=175,
+                    help="per-task budget = nominal (no-secret) steps + slack; robust skills cost ~+50/+100, "
+                         "a drop recovery ~+110, a jam recovery ~+225 -> 175 makes jams decisive (see calibrate)")
+    ap.add_argument("--calib-log", default="outputs/sim_calibrate2.log")
     ap.add_argument("--memories", default=",".join(BASELINES))
     ap.add_argument("--out", default="outputs/bench_sim")
     args = ap.parse_args()
+
+    nominal = load_nominal_steps(args.calib_log)
+    budget = lambda task: nominal[(task.obj, task.drawer)] + args.budget_slack  # noqa: E731
+    print("per-task budgets:", {f"{o}->{d}": budget(type("T", (), {"obj": o, "drawer": d})) for (o, d) in nominal}, flush=True)
 
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
@@ -83,7 +105,7 @@ def main() -> None:
                     if prev and len(prev) >= args.episodes:
                         runs.append({"rows": prev[: args.episodes], "bytes": 0})
                         continue
-                    runs.append(run_sequence(factory(), w, s, args.episodes, args.change_at, args.budget, log_f))
+                    runs.append(run_sequence(factory(), w, s, args.episodes, args.change_at, budget, log_f))
             results[name] = summarize(runs, args.episodes, args.change_at)
             r = results[name]
             print(f"== {name:14s} AUC={r['auc_success']:.3f} pre={r['success_pre_change']:.2f} "
