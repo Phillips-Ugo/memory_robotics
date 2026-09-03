@@ -49,7 +49,10 @@ cat <<EOF
 Done. M2 runbook (use tmux so nothing dies with your ssh session):
 
   # (new shells: source ~/.bashrc first so uv and OPENPI_DATA_HOME are set)
-  # pane 1 — policy server (first run downloads the pi05_libero checkpoint to /workspace):
+  # step 0 — verified checkpoint download (openpi's own downloader corrupts on restart):
+  cd $REPO_ROOT/vendor/openpi && uv run python $REPO_ROOT/scripts/download_pi05.py
+
+  # pane 1 — policy server (finds the checkpoint in OPENPI_DATA_HOME, no re-download):
   cd $REPO_ROOT/vendor/openpi && nohup uv run scripts/serve_policy.py --env LIBERO > $REPO_ROOT/server.log 2>&1 &
   tail -f $REPO_ROOT/server.log      # until it reports listening on :8000
 
