@@ -48,6 +48,33 @@ except ImportError:  # allow importing outside the harness for linting
     BasePolicyAdapter = object
 
 
+def _make_client(host: str, port: int):
+    """openpi's client with keepalive pings disabled: the first request blocks for
+    30-90 s while JAX/XLA compiles, and the default 20 s ping timeout kills the
+    connection (same workaround as RoboMemArena's StableWebsocketClientPolicy)."""
+    import logging
+    import time
+
+    import websockets.sync.client
+    from openpi_client import msgpack_numpy, websocket_client_policy
+
+    class _Stable(websocket_client_policy.WebsocketClientPolicy):
+        def _wait_for_server(self):
+            logging.info(f"Waiting for server at {self._uri}...")
+            while True:
+                try:
+                    conn = websockets.sync.client.connect(
+                        self._uri, compression=None, max_size=None,
+                        ping_interval=None, ping_timeout=None, close_timeout=30.0,
+                    )
+                    return conn, msgpack_numpy.unpackb(conn.recv())
+                except ConnectionRefusedError:
+                    logging.info("Still waiting for server...")
+                    time.sleep(5)
+
+    return _Stable(host=host, port=port)
+
+
 class Pi05WebsocketAdapter(BasePolicyAdapter):
     """Forwards harness observations to an openpi policy server over websocket."""
 
@@ -58,12 +85,8 @@ class Pi05WebsocketAdapter(BasePolicyAdapter):
 
     def _ensure_client(self):
         if self._client is None:
-            from openpi_client import websocket_client_policy
-
             print(f"[pi05-adapter] connecting to ws://{self.host}:{self.port} ...", flush=True)
-            self._client = websocket_client_policy.WebsocketClientPolicy(
-                host=self.host, port=self.port
-            )
+            self._client = _make_client(self.host, self.port)
             print(f"[pi05-adapter] connected: {self._client.get_server_metadata()}", flush=True)
         return self._client
 
