@@ -1,7 +1,7 @@
 """Experiment X2 in physics: the abstract benchmark's protocol with SimSkillEnv.
 
     MUJOCO_GL=glfw caffeinate -i vendor/rma-venv/bin/python -m bench.sim.run \
-        --worlds 5 --episodes 30 --seeds 1 --change-at 15 --budget-slack 175
+        --worlds 5 --episodes 30 --seeds 1 --change-at 15 --budget-slack 260
 
 Episodes are ~5-10 s each, so results stream to outputs/bench_sim/episodes.jsonl
 (resumable: finished (memory, seed, world) sequences are skipped on re-run) and the
@@ -73,10 +73,11 @@ def main() -> None:
     ap.add_argument("--episodes", type=int, default=30)
     ap.add_argument("--seeds", type=int, default=1)
     ap.add_argument("--change-at", type=int, default=15)
-    ap.add_argument("--budget-slack", type=int, default=175,
-                    help="per-task budget = nominal (no-secret) steps + slack; robust skills cost ~+50/+100, "
-                         "a drop recovery ~+110, a jam recovery ~+225 -> 175 makes jams decisive (see calibrate)")
-    ap.add_argument("--calib-log", default="outputs/sim_calibrate2.log")
+    ap.add_argument("--budget-slack", type=int, default=260,
+                    help="per-task budget = nominal (no-secret) steps + slack. Calibrated 2026-09-03: knowing both "
+                         "secrets costs up to +211, a drop recovery ~+110, a jam recovery >= +350 -> slack in "
+                         "[211, 350) makes jams decisive and everything else survivable; 260 leaves ~50 margin")
+    ap.add_argument("--calib-log", default="outputs/sim_calibrate3.log")
     ap.add_argument("--memories", default=",".join(BASELINES))
     ap.add_argument("--out", default="outputs/bench_sim")
     args = ap.parse_args()

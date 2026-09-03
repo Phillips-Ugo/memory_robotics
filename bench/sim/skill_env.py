@@ -262,6 +262,8 @@ class SimSkillEnv:
     def open(self, drawer: str) -> SkillEvent:
         s0 = self.log.steps
         moved = self._pull(drawer, firm=False)
+        if moved >= -0.08 and not self.done:  # stuck? tug once more before giving up (only jams pay this)
+            moved = self._pull(drawer, firm=False)
         return self._record("open", drawer, "ok" if moved < -0.08 else "jam", self.log.steps - s0)
 
     def pull_hard(self, drawer: str) -> SkillEvent:
