@@ -14,6 +14,7 @@ from pathlib import Path
 
 import numpy as np
 
+from . import env as _env
 from .env import STEP_BUDGET, SkillEnv
 from .memory import BASELINES, Memory
 from .planner import run_planner
@@ -27,19 +28,33 @@ def relevant_episodes(history: list, task, props) -> set[int]:
     rel = set()
     for log in history:
         for e in log.events:
-            if props.is_sticky(task.drawer) and e.skill == "open" and e.target == task.drawer and e.outcome == "jam":
+            if task.kind == "put" and props.is_sticky(task.drawer) and e.skill == "open" and e.target == task.drawer and e.outcome == "jam":
                 rel.add(log.episode_idx)
             if props.is_heavy(task.obj) and e.skill == "pick" and e.target == task.obj and e.outcome == "drop":
+                rel.add(log.episode_idx)
+            if task.kind == "fetch" and e.skill == "look_in" and e.outcome == "found" and log.task.obj == task.obj \
+                    and e.target == props.location_of(task.obj):
+                rel.add(log.episode_idx)
+            if task.kind == "put_any" and e.skill == "open" and e.outcome == "ok" and e.steps <= 2 and props.is_fast(e.target):
                 rel.add(log.episode_idx)
     return rel
 
 
-def run_sequence(memory: Memory, world_id: int, seed: int, episodes: int, change_at: int) -> dict:
-    world = make_world(world_id, seed)
+def run_sequence(memory: Memory, world_id: int, seed: int, episodes: int, change_at: int,
+                 extra_changes: int = 0, property_types=None, task_kinds=None) -> dict:
+    kw = {}
+    if property_types:
+        kw["property_types"] = tuple(property_types)
+    if task_kinds:
+        kw["task_kinds"] = tuple(task_kinds)
+    world = make_world(world_id, seed, **kw)
+    change_eps = {change_at}
+    if extra_changes:  # further events at random episodes after the main one
+        change_eps |= set(int(x) for x in world.rng.choice(range(change_at + 5, episodes - 3), size=extra_changes, replace=False))
     rows = []
     history = []
     for ep in range(episodes):
-        if ep == change_at:
+        if ep in change_eps:
             world.apply_change_event()
         task = world.sample_task()
         beliefs = memory.recall(task, initial_obs={"task": task.text})
@@ -60,6 +75,8 @@ def run_sequence(memory: Memory, world_id: int, seed: int, episodes: int, change
                 "failures": sum(e.outcome in ("jam", "drop") for e in env.log.events),
                 "ret_precision": prec,
                 "ret_recall": recl,
+                "wasted_looks": env.log.wasted_looks,
+                "kind": task.kind,
             }
         )
     return {"rows": rows, "bytes": memory.bytes_stored()}
@@ -148,19 +165,23 @@ def main() -> None:
     ap.add_argument("--episodes", type=int, default=50)
     ap.add_argument("--seeds", type=int, default=3)
     ap.add_argument("--change-at", type=int, default=25)
-    ap.add_argument("--budget", type=int, default=None, help="override STEP_BUDGET (default 26)")
+    ap.add_argument("--slack", type=int, default=None, help="override budget slack (default 11; budget = nominal(kind) + slack)")
+    ap.add_argument("--extra-changes", type=int, default=0, help="additional random change events after --change-at")
+    ap.add_argument("--properties", default=",".join(("sticky", "heavy", "location", "fast")),
+                    help="property types in the world (v0 was sticky,heavy)")
+    ap.add_argument("--kinds", default="put,put_any,fetch", help="task kinds (v0 was put)")
     ap.add_argument("--out", default="outputs/bench_v0")
     args = ap.parse_args()
-    if args.budget is not None:
-        from . import env as _env
-        _env.STEP_BUDGET = args.budget
+    if args.slack is not None:
+        _env.SLACK = args.slack
 
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     results = {}
     for name, factory in BASELINES.items():
         runs = [
-            run_sequence(factory(), w, s, args.episodes, args.change_at)
+            run_sequence(factory(), w, s, args.episodes, args.change_at, args.extra_changes,
+                         args.properties.split(","), args.kinds.split(","))
             for s in range(args.seeds)
             for w in range(args.worlds)
         ]

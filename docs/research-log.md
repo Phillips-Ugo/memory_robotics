@@ -1,5 +1,43 @@
 # Research log
 
+## 2026-09-04 — Day 8: Phase 3 begins — property library ×2, task kinds ×3, randomized change events
+
+**Built (abstract env):** two new hidden-property types and two new task kinds,
+same memory API. *Location*: one object starts inside a drawer; "bring X to the
+table" tasks need `look_in` (6 steps; a wasted look is ~11 with the open). *Fast
+drawer*: opens in 2 steps instead of 5 — the success-shaped secret X3 asked for; it
+pays on "put X away in any drawer" tasks where the robot chooses. Change events now
+flip a random property type; `--extra-changes N` adds more at random episodes.
+Budgets are per task kind (nominal + slack 11), the physics lesson applied.
+Old v0 configuration still reproduces (`--properties sticky,heavy --kinds put`).
+
+**Result (30 worlds × 50 × 3 seeds), success | mean steps by task kind:**
+
+| memory | put | put_any (free choice) | fetch |
+|---|---|---|---|
+| none | 0.48 / 23.9 | 0.71 / 20.9 | 0.41 / 30.6 |
+| last-5 | 0.72 / 21.0 | 0.98 / 15.4 | 0.86 / 23.7 |
+| retrieval | 0.82 / 20.0 | 0.97 / 15.3 | 0.91 / 22.9 |
+| consolidated | 0.78 / 20.3 | 0.98 / 15.1 | 0.90 / 22.9 |
+
+Free-choice tasks show the success-shaped secret being exploited (memories pick the
+fast drawer: 15 steps, 98%). Fetch is where memory pays most (+50 points).
+
+**X3 re-run with the success-shaped secret present:** failures-only is *still* best
+(0.95 vs 0.90 fed everything); success-only rises only 0.54 → 0.60. Reason: a failed
+episode contains every successful sub-step before the failure — including the cheap
+open that reveals the fast drawer — so failures are the most information-dense
+episodes, not merely the negative ones. "Store failures" = "store the episodes where
+the most happened." Only a property revealed solely by a *fully* successful episode
+could flip this; worth designing one for Phase 3's final library.
+
+**Two bugs found by the per-kind breakdown:** fetch nominal cost was under-counted
+(16 vs 21) so its budget was unfair, and the planner ignored "seen empty" evidence,
+so a failed search never narrowed the next one. Per-kind breakdowns are now part of
+every run's sanity check.
+
+**Not yet in physics:** look_in and the fast drawer (bench/sim still has the v0 pair).
+
 ## 2026-09-04 — Day 7d: physics X2 at scale — where "never revising" actually costs
 
 `bench/sim/run.py`, 10 worlds × 2 seeds × 30 episodes (600 episodes/memory), change

@@ -21,6 +21,9 @@ from .world import Task
 class Beliefs:
     sticky_drawers: set[str] = field(default_factory=set)
     heavy_objects: set[str] = field(default_factory=set)
+    object_in: dict[str, str] = field(default_factory=dict)  # obj -> drawer it was last found in
+    object_not_in: dict[str, set[str]] = field(default_factory=dict)  # obj -> drawers seen empty since
+    fast_drawers: set[str] = field(default_factory=set)  # drawers whose open was cheap (success-shaped)
     # optional: facts the memory wants the planner to re-test cheaply (revision)
     probe_drawers: set[str] = field(default_factory=set)
     probe_objects: set[str] = field(default_factory=set)
@@ -134,6 +137,9 @@ class ConsolidatedKB(Memory):
         self.probe_after = probe_after
         self.drawers: dict[str, Fact] = defaultdict(Fact)
         self.objects: dict[str, Fact] = defaultdict(Fact)
+        self.fast: dict[str, Fact] = defaultdict(Fact)  # drawer -> opens fast
+        self.where: dict[str, tuple[str, int]] = {}  # obj -> (drawer, episode last found)
+        self.not_in: dict[str, dict[str, int]] = defaultdict(dict)  # obj -> {drawer: episode seen empty}
         self.t = 0
 
     @property
@@ -146,10 +152,22 @@ class ConsolidatedKB(Memory):
             if e.skill == "open":
                 f = self.drawers[e.target]
                 f.value, f.evidence, f.last_confirmed = (e.outcome == "jam"), f.evidence + 1, self.t
-            elif e.skill == "pick":
+            elif e.skill == "pick" and e.outcome in ("ok", "drop"):
                 f = self.objects[e.target]
                 f.value, f.evidence, f.last_confirmed = (e.outcome == "drop"), f.evidence + 1, self.t
+            elif e.skill == "look_in":
+                obj = log.task.obj
+                if e.outcome == "found":
+                    self.where[obj] = (e.target, self.t)
+                    self.not_in[obj].pop(e.target, None)
+                else:
+                    self.not_in[obj][e.target] = self.t
+                    if self.where.get(obj, (None,))[0] == e.target:
+                        del self.where[obj]  # it moved
             # pull_hard / pick_two_hand give no evidence either way (they always work)
+            if e.skill == "open" and e.outcome == "ok":  # success-shaped: cheap open => fast drawer
+                f = self.fast[e.target]
+                f.value, f.evidence, f.last_confirmed = (e.steps <= 2), f.evidence + 1, self.t
 
     def recall(self, task: Task, initial_obs: dict) -> Beliefs:
         b = Beliefs()
@@ -165,20 +183,40 @@ class ConsolidatedKB(Memory):
                 b.probe_objects.add(task.obj)
             else:
                 b.heavy_objects.add(task.obj)
+        for d, f in self.fast.items():
+            if f.value:
+                b.fast_drawers.add(d)
+        for d, f in self.drawers.items():  # all known sticky drawers matter for free-choice tasks
+            if f.value and self.t - f.last_confirmed < self.probe_after:
+                b.sticky_drawers.add(d)
+        if task.obj in self.where:
+            b.object_in[task.obj] = self.where[task.obj][0]
+        found_t = self.where.get(task.obj, (None, -1))[1]
+        b.object_not_in[task.obj] = {d for d, t in self.not_in.get(task.obj, {}).items() if t > found_t}
         return b
 
     def bytes_stored(self) -> int:
-        return 40 * (len(self.drawers) + len(self.objects))
+        return 40 * (len(self.drawers) + len(self.objects) + len(self.fast) + len(self.where))
 
 
 def _beliefs_from_logs(logs: list[EpisodeLog]) -> Beliefs:
+    """Raw-log readers: believe whatever the (chronological) logs show, last write wins."""
     b = Beliefs()
-    for l in logs:
+    for l in sorted(logs, key=lambda l: l.episode_idx):
         for e in l.events:
             if e.outcome == "jam":
                 b.sticky_drawers.add(e.target)
             elif e.outcome == "drop":
                 b.heavy_objects.add(e.target)
+            elif e.skill == "look_in" and e.outcome == "found":
+                b.object_in[l.task.obj] = e.target
+                b.object_not_in.setdefault(l.task.obj, set()).discard(e.target)
+            elif e.skill == "look_in" and e.outcome == "empty":
+                b.object_not_in.setdefault(l.task.obj, set()).add(e.target)
+                if b.object_in.get(l.task.obj) == e.target:
+                    del b.object_in[l.task.obj]
+            elif e.skill == "open" and e.outcome == "ok" and e.steps <= 2:
+                b.fast_drawers.add(e.target)
     return b
 
 
