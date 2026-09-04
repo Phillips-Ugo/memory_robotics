@@ -71,12 +71,11 @@ Consolidation-with-revision is the moat. Experiment X4 is the proof.
 - **Skip:** offline RL, world models, sim-to-real.
 
 ### Phase 2 — Smallest possible cross-episode experiment (weeks 8–11)
-- [ ] One world in LIBERO or ManiSkill3, 2–3 hidden persistent properties
-  (which drawer sticks, which container is heavy…), scripted-skill or VLM-planner policy
+- [x] One world in LIBERO (robosuite), 2 hidden persistent properties (sticky drawer = joint friction, heavy object = mass), scripted-skill policy with force-limited magnetic grasps (3 Sep)
 - [x] Baselines: none · last-k · retrieval (token-overlap stand-in) · consolidated-KB prototype; LLM-summary still a stub (2 Sep, `bench/`)
 - [x] **X2 (v0, abstract sim):** any memory beats none within 3 episodes; retrieval best while static, consolidated best after a change event (2 Sep)
 - [x] Output: `outputs/bench_v0/curves.png` — four curves + the retention-vs-revision hypothesis (research log Day 4b)
-- [ ] Same experiment with robosuite skills behind `bench/env.SkillEnv` (real physics)
+- [x] Same experiment with robosuite skills behind the same interface (`bench/sim/`) — four curves hold in physics: none 0.49 / last-5 0.79 / retrieval 0.82 / consolidated 0.83 AUC (4 Sep; 5 worlds, needs more seeds for tight intervals)
 - [ ] LLM-planner variant so memory context can be free text
 - **Learn:** one sim framework in depth, procedural task generation, LLM agent/tool-use
   patterns, embedding retrieval, the LLM-agent memory papers.

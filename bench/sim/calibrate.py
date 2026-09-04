@@ -4,12 +4,15 @@ Runs the fixed planner under every combination of {task} x {no secret, sticky dr
 heavy object, both} x {beliefs: none, correct, stale} and prints step counts, so the
 budget can be set where a single unrecovered failure decides the episode (v0 rule).
 
-    MUJOCO_GL=glfw caffeinate -i vendor/rma-venv/bin/python -m bench.sim.calibrate
+    MUJOCO_GL=glfw caffeinate -i vendor/rma-venv/bin/python -m bench.sim.calibrate --seeds 3
+
+The nominal (no-secret, no-belief) rows are what bench.sim.run keys budgets on, so
+they are run over --seeds placements and reported per seed; run.py takes the median.
 """
 
 from __future__ import annotations
 
-import itertools
+import argparse
 import time
 
 import numpy as np
@@ -21,13 +24,17 @@ from .skill_env import DRAWERS, OBJECTS, SimProps, SimSkillEnv
 
 
 def main() -> None:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--seeds", type=int, default=1, help="placements to sample for the nominal rows")
+    args = ap.parse_args()
     rows = []
     t0 = time.time()
     tasks = [Task(o, d) for o in OBJECTS for d in DRAWERS]
     for task in tasks:
         for sticky, heavy in ((False, False), (True, False), (False, True), (True, True)):
             props = SimProps(task.drawer if sticky else "none", task.obj if heavy else "none")
-            for belief in ("none", "correct", "stale"):
+            seeds = range(args.seeds) if (not sticky and not heavy) else [0]
+            for belief, seed in ((b, sd) for b in ("none", "correct", "stale") for sd in (seeds if b == "none" else [0])):
                 b = Beliefs()
                 if belief == "correct":
                     if sticky:
@@ -37,7 +44,7 @@ def main() -> None:
                 elif belief == "stale":  # believes both secrets; wrong wherever they're absent
                     b.sticky_drawers.add(task.drawer)
                     b.heavy_objects.add(task.obj)
-                env = SimSkillEnv(props, task, 0, step_budget=5000)
+                env = SimSkillEnv(props, task, 0, step_budget=5000, seed=seed)
                 run_planner(env, b)
                 rows.append((task.text, sticky, heavy, belief, env.log.steps, env.log.success, env.log.stale_actions,
                              ";".join(f"{e.skill}->{e.outcome}" for e in env.log.events)))

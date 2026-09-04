@@ -1,5 +1,45 @@
 # Research log
 
+## 2026-09-04 — Day 7: X2 in physics — the four curves survive the move to robosuite
+
+**Result** (`bench/sim/run.py`, 5 worlds × 30 episodes × 1 seed, change event at
+episode 15, per-task budget = nominal + 260; figure
+`docs/figures/bench_sim_curves_2026-09-03.png`):
+
+| memory | AUC | pre-change | post-change (first 10) | stale actions post-change |
+|---|---|---|---|---|
+| none | 0.49 | 0.52 [0.39, 0.65] | 0.44 | 0.4 |
+| last-5 | 0.79 | 0.78 [0.65, 0.87] | 0.80 | 2.2 |
+| retrieval (never forgets) | 0.82 | **0.86** [0.74, 0.93] | 0.80 | **3.4, rising** |
+| consolidated + probe-after-8 | **0.83** | 0.84 [0.71, 0.92] | **0.84** | 2.4, flattening |
+
+Same shape as the abstract v0 (53/82/89/87 pre-change there): any memory adds ~30
+points within 3 episodes; retrieval wins while static and keeps paying for the
+fixed drawer afterwards; consolidated is the only one that doesn't lose ground at
+the change event. **Caveat stated plainly:** n=5 worlds → ±10-point intervals, so
+retrieval vs consolidated is not statistically separated yet; none vs any-memory
+is. More worlds/seeds is a background job (~2.5 min per 30-episode sequence).
+
+**Two bugs that would have silently corrupted the result, caught mid-run:**
+1. A skill interrupted by the step budget reported `jam`/`drop` — a budget timeout
+   was being written into memory as evidence ("this object is heavy"). Now reports
+   `timeout`, which no memory treats as evidence. *Lesson: the episode log is the
+   memory's training data; anything that isn't an observation must not look like one.*
+2. One object sat at the edge of the arm's workspace: reach times were bimodal
+   (383 vs 587 steps for the same task) and it occasionally failed a grasp for no
+   reason — which the calibration (one seed) had baked into that task's budget.
+   Moved it; calibration now runs the nominal rows over several placements and
+   the runner takes the median.
+Noise floor after fixes: 0 spurious jams, 4 spurious drops in 150 no-memory episodes.
+
+**Also:** the abstract sim earned its keep. Every design decision it forced
+(calibrated budget, additive slack, "robust must cost less than failing", success as
+a weak revision signal) transferred to physics without change. Fast sim first,
+physics second is the right order for benchmark design.
+
+**Next:** scale worlds/seeds in the background for real intervals; then the LLM
+planner variant so memory context can be text (needed before any VLA plugs in).
+
 ## 2026-09-03 — Day 6: the benchmark gets physics (Phase 2 v0.5)
 
 **Did:** rebuilt the v0 benchmark's skill environment on real physics — a

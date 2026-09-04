@@ -25,12 +25,15 @@ from .skill_env import DRAWERS, OBJECTS, SimProps, SimSkillEnv
 
 
 def load_nominal_steps(calib_log: str) -> dict[tuple[str, str], int]:
-    """No-secret, no-belief step count per (object, drawer) from a calibrate.py log."""
-    nominal = {}
+    """Median no-secret, no-belief step count per (object, drawer) from a calibrate.py log."""
+    import statistics
+
+    samples: dict[tuple[str, str], list[int]] = {}
     for line in Path(calib_log).read_text().splitlines():
         m = re.match(r"(\S+)\s+(\S+)\s+sticky=0 heavy=0 belief=none\s+steps=\s*(\d+)", line)
         if m:
-            nominal[(m[1], m[2])] = int(m[3])
+            samples.setdefault((m[1], m[2]), []).append(int(m[3]))
+    nominal = {k: int(statistics.median(v)) for k, v in samples.items()}
     if not nominal:
         raise SystemExit(f"no nominal rows in {calib_log}")
     return nominal
@@ -104,7 +107,9 @@ def main() -> None:
                 for w in range(args.worlds):
                     prev = done.get((factory().name, s, w))
                     if prev and len(prev) >= args.episodes:
-                        runs.append({"rows": prev[: args.episodes], "bytes": 0})
+                        # a world rerun after a crash appends a fresh full sequence after the
+                        # partial one: the LAST `episodes` rows are the complete run
+                        runs.append({"rows": prev[-args.episodes :], "bytes": 0})
                         continue
                     runs.append(run_sequence(factory(), w, s, args.episodes, args.change_at, budget, log_f))
             results[name] = summarize(runs, args.episodes, args.change_at)
@@ -113,7 +118,8 @@ def main() -> None:
                   f"post10={r['success_post_change_first10']:.2f} stale(post)={r['stale_actions_post_change']:.1f}", flush=True)
 
     (out / "results.json").write_text(json.dumps({"args": vars(args), "results": results}, indent=2))
-    plot(results, args.episodes, args.change_at, out / "curves.png")
+    plot(results, args.episodes, args.change_at, out / "curves.png",
+         budget_label=f"budget = nominal + {args.budget_slack}", title="Cross-episode memory benchmark v0.5 (robosuite physics)")
     print(f"wrote {out/'curves.png'}")
 
 

@@ -82,7 +82,8 @@ def summarize(runs: list[dict], episodes: int, change_at: int) -> dict:
     }
 
 
-def plot(results: dict, episodes: int, change_at: int, out: Path) -> None:
+def plot(results: dict, episodes: int, change_at: int, out: Path, budget_label: str | None = None,
+         title: str = "Cross-episode memory benchmark v0") -> None:
     import matplotlib
 
     matplotlib.use("Agg")
@@ -97,7 +98,7 @@ def plot(results: dict, episodes: int, change_at: int, out: Path) -> None:
     for ax, title, ylabel in zip(
         axes,
         ["Experience curve", "Steps per episode", "Cumulative stale actions"],
-        ["success rate", f"steps (budget {STEP_BUDGET})", "stale actions"],
+        ["success rate", f"steps ({budget_label or f'budget {STEP_BUDGET}'})", "stale actions"],
     ):
         ax.axvline(change_at, color="k", ls="--", lw=0.8)
         ax.text(change_at + 0.5, ax.get_ylim()[1] * 0.95, "change event", fontsize=8, va="top")
@@ -108,7 +109,7 @@ def plot(results: dict, episodes: int, change_at: int, out: Path) -> None:
     axes[0].set_ylim(0, 1.02)
     axes[0].legend(fontsize=8)
     n = next(iter(results.values()))["n_runs"]
-    fig.suptitle(f"Cross-episode memory benchmark v0 — {n} runs (worlds × seeds) per curve", fontsize=11)
+    fig.suptitle(f"{title} — {n} runs (worlds × seeds) per curve", fontsize=11)
     fig.tight_layout()
     fig.savefig(out, dpi=130)
 
