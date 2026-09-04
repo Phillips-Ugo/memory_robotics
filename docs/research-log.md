@@ -1,5 +1,30 @@
 # Research log
 
+## 2026-09-04 — Day 7c: X3 — failure memory is the whole signal (and it can't revise)
+
+`bench/run_x3.py`: each memory fed all / success-only / failures-only episodes.
+Abstract env, 30 worlds × 50 × 3 seeds.
+
+| fed with | last-5 | retrieval | consolidated |
+|---|---|---|---|
+| everything | 0.80 | 0.86 | 0.85 |
+| successes only | 0.54 (= none) | 0.54 | 0.54 |
+| failures only | **0.95** | 0.95 | 0.92 |
+
+Success-only memory is worthless here: every secret manifests as a failure, and a
+jam is fatal within the budget, so successful episodes never carry the decisive
+evidence. Failures-only is the best configuration tested, at 370 bytes vs 6,409 for
+full retrieval — the last five *failures* span far more informative history than
+the last five episodes. But failures-only cannot un-learn: revision needs a success
+where a failure was expected (highest stale count, 6.6; consolidated drops 0.98 →
+0.82 at the change vs 0.87 → 0.84 when fed everything).
+
+**Design principle for the library:** store failures to learn; store the successes
+that *contradict* a stored failure to revise. Everything else is noise.
+**Caveat:** this world's secrets are all failure-shaped. A property that only shows
+up on success (a shortcut) would flip the result; Phase 3's property library needs
+at least one of those to keep the benchmark honest.
+
 ## 2026-09-04 — Day 7b: an LLM reads the memory — retrieval collapses 33 points at the change event
 
 **Setup:** `bench/run_llm.py --backend anthropic` (claude-haiku-4-5), abstract env,

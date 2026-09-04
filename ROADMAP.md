@@ -85,7 +85,7 @@ Consolidation-with-revision is the moat. Experiment X4 is the proof.
 - [ ] Change events + episodes-to-recovery metric; cross-episode complexity score
 - [ ] Ground-truth "which past episodes were relevant" annotations (I control the generator)
 - [ ] Evaluation harness, baseline table, leaderboard page
-- [ ] **X3:** failure-aware memory vs success-only memory
+- [x] **X3** (abstract, 4 Sep): success-only memory = no memory (0.54); failures-only best (0.95) but cannot revise; principle: store failures to learn, contradicting successes to revise
 - [ ] Output: public repo + 4–6 page report (arXiv early 2027)
 
 ### Phase 4 — The memory layer itself (weeks 19–24)
