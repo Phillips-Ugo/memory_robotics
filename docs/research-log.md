@@ -1,5 +1,34 @@
 # Research log
 
+## 2026-09-04 — Day 7d: physics X2 at scale — where "never revising" actually costs
+
+`bench/sim/run.py`, 10 worlds × 2 seeds × 30 episodes (600 episodes/memory), change
+at 15, budget nominal+260. Figure `docs/figures/bench_sim_big_curves_2026-09-04.png`.
+
+| memory | pre-change (ep 5–14, n=200) | post-change (ep 15–29, n=300) | stale/ep post |
+|---|---|---|---|
+| none | 0.53 [0.46, 0.59] | 0.52 [0.46, 0.58] | 0.05 |
+| last-5 | 0.80 [0.74, 0.85] | 0.82 [0.78, 0.86] | 0.16 |
+| retrieval | **0.87** [0.82, 0.91] | 0.83 [0.79, 0.87] | **0.29** |
+| consolidated | 0.84 [0.78, 0.88] | **0.85** [0.81, 0.89] | 0.21 |
+
+**Honest reading.** Memory vs none: ~30 points, unambiguous. Retrieval vs
+consolidated on *success*: intervals overlap both before and after the change — not
+separated in physics with the scripted planner. Where never-revising shows: retrieval
+is the only memory whose success falls at the change event (0.87 → 0.83) while every
+other memory's rises, and it takes ~40% more stale actions per episode afterwards
+(0.29 vs 0.21). Success is a blunt instrument here because the planner recovers
+in-episode and the budget tolerates one stale action; the sharp version of the same
+effect is the LLM-reader run (Day 7b): retrieval 0.99 → 0.66.
+
+**For public claims:** "the memory that never forgets was the only one that got
+worse when the world changed, and took 40% more wasted actions; with a language
+model reading it, it collapsed from 99% to 66%." Both sourced; neither overclaims.
+
+**Also today:** ground-truth retrieval precision/recall added to the abstract runner
+(last-5 0.13/0.33, retrieval 0.16/0.50 — fewer than one of five surfaced episodes
+bears on the task); X3 (Day 7c) and the LLM-reader run (Day 7b).
+
 ## 2026-09-04 — Day 7c: X3 — failure memory is the whole signal (and it can't revise)
 
 `bench/run_x3.py`: each memory fed all / success-only / failures-only episodes.

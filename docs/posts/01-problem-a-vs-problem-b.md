@@ -89,3 +89,35 @@ Next: the silent bug that made a pretrained policy score 0%.
 - #2 — the normalization bug (research log, Day 0 part 2)
 - #3 — "How to build a benchmark for something nobody measures" (docs/benchmark-design.md)
 - #4 — M2: reproducing π₀.₅ on RoboMemArena for $X on a rented 4090
+
+
+# Post #2 — Week 2: the memory test (drafted 2026-09-04, refine in your voice)
+
+I gave a robot a memory. Its success rate went from 49% to 80%.
+
+Here's the test I built.
+
+A kitchen with secrets: one drawer sticks, one box is heavier than it looks. The
+robot isn't told any of this. It does 30 tasks in a row in the same kitchen, and the
+only way to learn the secrets is to fail and remember.
+
+Left video: no memory. It tries the gentle pull first (the cheap move), the drawer
+jams, then it pulls hard. It grabs the butter lightly, drops it, then grips firmly.
+Every task is day one.
+
+Right video: same robot, same task, but it remembers this kitchen. Straight to the
+hard pull. Straight to the firm grip.
+
+Then the twist. Halfway through the 30 tasks I quietly fix the sticky drawer and
+make a different one stick.
+
+The memory that remembered everything perfectly was the only one that got *worse*
+when the world changed, and took 40% more wasted actions on the drawer that now
+works. With a language model reading the memory instead of a fixed script, it
+collapsed from 99% to 66%. The memory that periodically double-checks its own
+beliefs didn't drop.
+
+Real physics (MuJoCo, Panda arm), 600 episodes per memory. Code, chart, videos:
+github.com/Phillips-Ugo/memory_robotics
+
+Video: docs/figures/side_by_side_2026-09-04.mp4
