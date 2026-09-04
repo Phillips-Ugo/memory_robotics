@@ -1,5 +1,37 @@
 # Research log
 
+## 2026-09-04 — Day 7b: an LLM reads the memory — retrieval collapses 33 points at the change event
+
+**Setup:** `bench/run_llm.py --backend anthropic` (claude-haiku-4-5), abstract env,
+10 worlds × 50 episodes, change at 25. Memories now hand the planner *text*: raw
+episode logs (last-5, retrieval) or fact sentences with evidence and age
+(consolidated). The model plans a skill sequence and replans after failures.
+2,604 calls, 1.49M tokens (~$1.50).
+
+| memory | scripted reader AUC | Haiku AUC | Haiku pre → post-change | stale (post) |
+|---|---|---|---|---|
+| none | 0.54 | 0.52 | 0.49 → 0.53 | 0 |
+| last-5 | 0.80 | 0.93 | 0.97 → 0.91 | 6.5 |
+| retrieval (never forgets) | 0.86 | 0.87 | **0.99 → 0.66** | 8.0 |
+| consolidated + probe | 0.85 | **0.95** | 1.00 → 0.90 | 4.7 |
+
+**Findings.** (1) Harness validated: no-memory matches the scripted planner
+(0.52 vs 0.54). (2) The "never revises" failure is now unmistakable with tight
+intervals: retrieval is near-perfect while the world is static and loses a third of
+its success the moment it changes. (3) Consolidated facts are the best-used
+representation, and the model uses raw logs better than the rule-based reader — it
+is cautious (robust skill when the context is ambiguous), which the budget tolerates
+and which shows up as higher stale counts. That is why stale actions and steps are
+reported next to success: the success metric alone rewards caution.
+
+**The confound that nearly produced the opposite conclusion.** The first Haiku run
+had none=0.22 and consolidated=0.52 ("LLMs can't use structured facts"). Tracing
+showed the *executor* was at fault: 7/40 no-memory episodes discarded for
+unparseable replies, and targets like "middle drawer" or a separate `drawer` key on
+`place` routed to the wrong drawer. After robust parsing + target normalization the
+model's decisions were correct every time. **Rule:** before any LLM-vs-memory claim,
+the no-memory row must match the scripted planner; if not, the plumbing is broken.
+
 ## 2026-09-04 — Day 7: X2 in physics — the four curves survive the move to robosuite
 
 **Result** (`bench/sim/run.py`, 5 worlds × 30 episodes × 1 seed, change event at
