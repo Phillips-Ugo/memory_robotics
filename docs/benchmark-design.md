@@ -152,6 +152,12 @@ that feed back into this spec (details in research log, Day 4b):
   the stack is paid for.
 - How much of the "planner" should be an LLM vs hand-written? Hand-written first: it
   makes memory the *only* moving part.
-- Does the memory context get injected as text, as structured state, or both? The
-  API should allow both; v0 uses text.
+- ~~Does the memory context get injected as text, as structured state, or both?~~
+  Both, now (`bench/llm_planner.py`, 2026-09-04): `recall()` returns structured
+  beliefs for the scripted planner; `recall_text()` renders each memory as text
+  (raw logs for last-k/retrieval, fact sentences with evidence + age for the
+  consolidated store) for an LLM planner that replans after failures. A mock
+  reader reproduces the scripted results exactly; the LLM run (`bench/run_llm.py
+  --backend anthropic`) is the first place "structure beats raw retrieval" is a
+  genuinely open question, because the planner has to *interpret* the context.
 - What's the smallest property library that still separates the baselines? Find out.
