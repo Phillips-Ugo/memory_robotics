@@ -29,6 +29,11 @@ class Beliefs:
 class Memory:
     name = "base"
 
+    def surfaced(self, task: Task) -> list[int]:
+        """Episode indices this memory would put in front of the planner for `task`
+        (for retrieval precision/recall against generator ground truth)."""
+        return []
+
     def observe(self, log: EpisodeLog) -> None:  # noqa: D401
         raise NotImplementedError
 
@@ -69,6 +74,9 @@ class LastK(Memory):
     def recall(self, task: Task, initial_obs: dict) -> Beliefs:
         return _beliefs_from_logs(self.logs)
 
+    def surfaced(self, task: Task) -> list[int]:
+        return [l.episode_idx for l in self.logs]
+
     def bytes_stored(self) -> int:
         return sum(len(l.text) for l in self.logs)
 
@@ -90,14 +98,16 @@ class Retrieval(Memory):
     def observe(self, log: EpisodeLog) -> None:
         self.logs.append(log)
 
-    def recall(self, task: Task, initial_obs: dict) -> Beliefs:
+    def _top(self, task: Task) -> list[EpisodeLog]:
         q = set(task.text.split())
-        scored = sorted(
-            self.logs,
-            key=lambda l: (len(q & set(l.task.text.split())), l.episode_idx),
-            reverse=True,
-        )
-        return _beliefs_from_logs(scored[: self.top_k])
+        return sorted(self.logs, key=lambda l: (len(q & set(l.task.text.split())), l.episode_idx),
+                      reverse=True)[: self.top_k]
+
+    def recall(self, task: Task, initial_obs: dict) -> Beliefs:
+        return _beliefs_from_logs(self._top(task))
+
+    def surfaced(self, task: Task) -> list[int]:
+        return [l.episode_idx for l in self._top(task)]
 
     def bytes_stored(self) -> int:
         return sum(len(l.text) for l in self.logs)

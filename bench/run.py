@@ -20,17 +20,37 @@ from .planner import run_planner
 from .world import make_world
 
 
+def relevant_episodes(history: list, task, props) -> set[int]:
+    """Ground truth: past episodes carrying direct evidence about this task's secrets
+    under the CURRENT world properties (a jam on its drawer if that drawer is sticky
+    now, a drop of its object if that object is heavy now)."""
+    rel = set()
+    for log in history:
+        for e in log.events:
+            if props.is_sticky(task.drawer) and e.skill == "open" and e.target == task.drawer and e.outcome == "jam":
+                rel.add(log.episode_idx)
+            if props.is_heavy(task.obj) and e.skill == "pick" and e.target == task.obj and e.outcome == "drop":
+                rel.add(log.episode_idx)
+    return rel
+
+
 def run_sequence(memory: Memory, world_id: int, seed: int, episodes: int, change_at: int) -> dict:
     world = make_world(world_id, seed)
     rows = []
+    history = []
     for ep in range(episodes):
         if ep == change_at:
             world.apply_change_event()
         task = world.sample_task()
         beliefs = memory.recall(task, initial_obs={"task": task.text})
+        rel = relevant_episodes(history, task, world.props)
+        surf = set(memory.surfaced(task))
+        prec = len(rel & surf) / len(surf) if surf else None
+        recl = len(rel & surf) / len(rel) if rel else None
         env = SkillEnv(world, task, ep)
         run_planner(env, beliefs)
         memory.observe(env.log)
+        history.append(env.log)
         rows.append(
             {
                 "ep": ep,
@@ -38,6 +58,8 @@ def run_sequence(memory: Memory, world_id: int, seed: int, episodes: int, change
                 "steps": env.log.steps,
                 "stale": env.log.stale_actions,
                 "failures": sum(e.outcome in ("jam", "drop") for e in env.log.events),
+                "ret_precision": prec,
+                "ret_recall": recl,
             }
         )
     return {"rows": rows, "bytes": memory.bytes_stored()}
@@ -67,8 +89,14 @@ def summarize(runs: list[dict], episodes: int, change_at: int) -> dict:
             recovery = i
             break
 
+    def _mean(key):
+        vals = [r[key] for run in runs for r in run["rows"] if r.get(key) is not None]
+        return float(np.mean(vals)) if vals else None
+
     return {
         "n_runs": n,
+        "retrieval_precision": _mean("ret_precision"),
+        "retrieval_recall": _mean("ret_recall"),
         "curve_success": succ.mean(0).tolist(),
         "curve_steps": steps.mean(0).tolist(),
         "curve_stale": stale.mean(0).tolist(),
@@ -143,7 +171,8 @@ def main() -> None:
             f"{name:14s} AUC={r['auc_success']:.3f}  pre-change={r['success_pre_change']:.2f} "
             f"[{lo:.2f},{hi:.2f}]  post-change(first10)={r['success_post_change_first10']:.2f}  "
             f"recovery={r['episodes_to_recovery']}  stale(post)={r['stale_actions_post_change']:.1f}  "
-            f"bytes={r['bytes_stored_mean']:.0f}"
+            f"bytes={r['bytes_stored_mean']:.0f}  "
+            + (f"ret P/R={r['retrieval_precision']:.2f}/{r['retrieval_recall']:.2f}" if r['retrieval_precision'] is not None else "ret P/R=n/a")
         )
 
     (out / "results.json").write_text(json.dumps({"args": vars(args), "results": results}, indent=2))
