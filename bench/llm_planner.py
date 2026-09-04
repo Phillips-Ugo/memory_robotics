@@ -126,19 +126,50 @@ class AnthropicBackend:
         self.tokens = 0
 
     def plan(self, task: Task, context: str, history: list[str]) -> list[dict]:
-        msg = self.client.messages.create(
-            model=self.model, max_tokens=300, system=SYSTEM,
-            messages=[{"role": "user", "content": build_prompt(task, context, history)}],
-        )
-        self.calls += 1
-        self.tokens += msg.usage.input_tokens + msg.usage.output_tokens
-        text = msg.content[0].text
-        m = re.search(r"\[.*\]", text, re.S)
+        prompt = build_prompt(task, context, history)
+        self.last_raw = ""
+        for attempt in range(2):  # one retry on an unparseable reply
+            msg = self.client.messages.create(
+                model=self.model, max_tokens=400, system=SYSTEM,
+                messages=[{"role": "user", "content": prompt}],
+            )
+            self.calls += 1
+            self.tokens += msg.usage.input_tokens + msg.usage.output_tokens
+            text = msg.content[0].text
+            self.last_raw = text
+            plan = parse_plan(text)
+            if plan:
+                return plan
+            prompt += "\n\nYour previous reply was not a JSON list of steps. Reply with ONLY the JSON list."
+        return []
+
+
+def parse_plan(text: str) -> list[dict]:
+    """Extract the first JSON array of steps from a model reply (tolerates code fences and prose)."""
+    text = re.sub(r"```(?:json)?", "", text)
+    for m in re.finditer(r"\[[^\[\]]*\]", text, re.S):
         try:
-            plan = json.loads(m.group(0) if m else text)
+            plan = json.loads(m.group(0))
         except json.JSONDecodeError:
-            plan = []
-        return [s for s in plan if isinstance(s, dict) and s.get("skill") in SKILLS]
+            continue
+        if isinstance(plan, list) and all(isinstance(x, dict) for x in plan):
+            return [x for x in plan if x.get("skill") in SKILLS]
+    return []
+
+
+def normalize_step(step: dict, task: Task, drawers, objects) -> tuple[str, str]:
+    """Map a model step onto (skill, canonical target). Models write "middle drawer",
+    "the butter", or put the drawer in a separate key — none of that should fail an episode."""
+    skill = step["skill"]
+    raw = " ".join(str(step.get(k, "")) for k in ("target", "drawer", "object")).lower()
+    if skill in ("open", "pull_hard", "place"):
+        cands = drawers
+    else:
+        cands = objects
+    hit = [c for c in cands if c.lower().replace("_", " ") in raw.replace("_", " ")]
+    if hit:
+        return skill, hit[0]
+    return skill, (task.drawer if skill in ("open", "pull_hard", "place") else task.obj)
 
 
 def make_backend(name: str):
@@ -149,27 +180,32 @@ def make_backend(name: str):
 @dataclass
 class LLMRunStats:
     calls: int = 0
+    trace: list = None
 
 
-def run_llm_planner(env, task: Task, context: str, backend, max_calls: int = 4) -> LLMRunStats:
+def run_llm_planner(env, task: Task, context: str, backend, max_calls: int = 4, trace: bool = False) -> LLMRunStats:
     """Execute backend plans against a SkillEnv/SimSkillEnv, replanning after any
     failed skill (jam/drop) with the failure appended to the in-episode history."""
     history: list[str] = []
-    stats = LLMRunStats()
+    stats = LLMRunStats(trace=[] if trace else None)
     drawer_open = False
     holding = False
     while stats.calls < max_calls and not env.done:
         plan = backend.plan(task, context, history)
         stats.calls += 1
+        if trace:
+            stats.trace.append({"history": list(history), "plan": plan, "raw": getattr(backend, "last_raw", "")})
         if not plan:
             break
         failed = False
+        drawers = getattr(env, "drawer_names", None) or getattr(env.world, "drawers", ())
+        objects = getattr(env, "object_names", None) or getattr(env.world, "objects", ())
         for step in plan:
             if env.done:
                 break
-            skill, target = step["skill"], step.get("target", "")
+            skill, target = normalize_step(step, task, drawers, objects)
             if skill == "place":
-                ev = env.place(task.obj, target or task.drawer)
+                ev = env.place(task.obj, target)
             else:
                 ev = getattr(env, skill)(target)
             history.append(f"{ev.skill}({ev.target}) -> {ev.outcome}")

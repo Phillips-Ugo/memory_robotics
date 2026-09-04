@@ -74,6 +74,9 @@ class SimProps:
 class SimSkillEnv:
     """Same surface as bench.env.SkillEnv, backed by MuJoCo."""
 
+    drawer_names = tuple(DRAWERS)
+    object_names = tuple(OBJECTS)
+
     def __init__(self, props: SimProps, task: Task, episode_idx: int, step_budget: int = 700,
                  render: bool = False, seed: int = 0, cam_size: int = 128, render_every: int = 3) -> None:
         self.render_every = render_every

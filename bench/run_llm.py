@@ -21,7 +21,7 @@ from .run import plot, summarize
 from .world import make_world
 
 
-def run_sequence(memory, backend, world_id: int, seed: int, episodes: int, change_at: int) -> dict:
+def run_sequence(memory, backend, world_id: int, seed: int, episodes: int, change_at: int, trace_f=None) -> dict:
     world = make_world(world_id, seed)
     rows = []
     for ep in range(episodes):
@@ -30,8 +30,13 @@ def run_sequence(memory, backend, world_id: int, seed: int, episodes: int, chang
         task = world.sample_task()
         context = recall_text(memory, task)
         env = SkillEnv(world, task, ep)
-        stats = run_llm_planner(env, task, context, backend)
+        stats = run_llm_planner(env, task, context, backend, trace=trace_f is not None)
         memory.observe(env.log)
+        if trace_f is not None:
+            trace_f.write(json.dumps({"memory": memory.name, "world": world_id, "ep": ep, "task": task.text,
+                                      "props": [world.props.sticky_drawer, world.props.heavy_object],
+                                      "context": context, "trace": stats.trace, "events": [e.__dict__ for e in env.log.events],
+                                      "success": env.log.success, "steps": env.log.steps}) + "\n")
         rows.append({"ep": ep, "success": int(env.log.success), "steps": env.log.steps,
                      "stale": env.log.stale_actions, "calls": stats.calls, "ctx_chars": len(context)})
     return {"rows": rows, "bytes": memory.bytes_stored()}
@@ -46,6 +51,7 @@ def main() -> None:
     ap.add_argument("--change-at", type=int, default=25)
     ap.add_argument("--budget", type=int, default=None)
     ap.add_argument("--out", default=None)
+    ap.add_argument("--trace", action="store_true", help="write every prompt context/plan/outcome to trace.jsonl")
     args = ap.parse_args()
     if args.budget is not None:
         _env.STEP_BUDGET = args.budget
@@ -53,9 +59,10 @@ def main() -> None:
     out.mkdir(parents=True, exist_ok=True)
 
     backend = make_backend(args.backend)
+    trace_f = (out / "trace.jsonl").open("w") if args.trace else None
     results = {}
     for name, factory in BASELINES.items():
-        runs = [run_sequence(factory(), backend, w, s, args.episodes, args.change_at)
+        runs = [run_sequence(factory(), backend, w, s, args.episodes, args.change_at, trace_f)
                 for s in range(args.seeds) for w in range(args.worlds)]
         results[name] = summarize(runs, args.episodes, args.change_at)
         r = results[name]
