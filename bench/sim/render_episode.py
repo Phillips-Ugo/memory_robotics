@@ -19,6 +19,9 @@ from .skill_env import SimProps, SimSkillEnv
 ap = argparse.ArgumentParser()
 ap.add_argument("obj"); ap.add_argument("drawer")
 ap.add_argument("--sticky", default="none"); ap.add_argument("--heavy", default="none")
+ap.add_argument("--kind", default="put", choices=["put", "put_any", "fetch"])
+ap.add_argument("--hidden", default=None, help="object hidden in a drawer"); ap.add_argument("--hidden-in", default=None)
+ap.add_argument("--fast", default=None, help="fast drawer")
 ap.add_argument("--believe", action="store_true", help="planner already knows the secrets")
 ap.add_argument("--zoom", action="store_true", help="tighter agentview: closer, narrower field of view")
 ap.add_argument("--slowmo", action="store_true", help="3x slow-motion around jams/drops")
@@ -29,7 +32,11 @@ a = ap.parse_args()
 b = Beliefs()
 if a.believe:
     b.sticky_drawers.add(a.sticky); b.heavy_objects.add(a.heavy)
-env = SimSkillEnv(SimProps(a.sticky, a.heavy), Task(a.obj, a.drawer), 0, step_budget=5000,
+    if a.hidden and a.hidden_in:
+        b.object_in[a.hidden] = a.hidden_in
+    if a.fast:
+        b.fast_drawers.add(a.fast)
+env = SimSkillEnv(SimProps(a.sticky, a.heavy, a.hidden, a.hidden_in, a.fast), Task(a.obj, a.drawer, a.kind), 0, step_budget=5000,
                   render=True, cam_size=a.size, render_every=2)
 if a.zoom:
     m = env.sim.model
@@ -57,7 +64,7 @@ if a.slowmo:
     frames = out
 
 Path(a.out).mkdir(parents=True, exist_ok=True)
-p = Path(a.out) / f"{a.obj}_{a.drawer}_sticky-{a.sticky}_heavy-{a.heavy}{'_known' if a.believe else ''}{'_zoom' if a.zoom else ''}{'_slow' if a.slowmo else ''}.mp4"
+p = Path(a.out) / f"{a.kind}_{a.obj}_{a.drawer}_sticky-{a.sticky}_heavy-{a.heavy}{'_hidden-' + a.hidden_in if a.hidden_in else ''}{'_known' if a.believe else ''}{'_zoom' if a.zoom else ''}{'_slow' if a.slowmo else ''}.mp4"
 imageio.mimwrite(p, frames, fps=24, quality=8)
 print(f"{len(frames)} frames -> {p}")
 env.shutdown()

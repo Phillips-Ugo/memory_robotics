@@ -1,5 +1,41 @@
 # Research log
 
+## 2026-09-05 — Day 9: Phase 3 world in physics — first numbers, and two calibration gaps
+
+`bench/sim/run.py --properties sticky,heavy,location,fast --kinds put,put_any,fetch`,
+6 worlds × 30 episodes, change at 15 (random property type). 720 episodes.
+Figure `docs/figures/bench_sim_p3_curves_2026-09-05.png`.
+
+| memory | AUC | put | put_any | fetch (success / steps / wasted looks) |
+|---|---|---|---|---|
+| none | 0.68 | 0.54 | 1.00 | 0.47 / 652 / 0.97 |
+| last-5 | 0.79 | 0.71 | 1.00 | 0.63 / 454 / 0.21 |
+| retrieval | 0.82 | 0.79 | 1.00 | 0.65 / 427 / 0.16 |
+| consolidated | 0.82 | 0.77 | 1.00 | 0.66 / 430 / 0.16 |
+
+**What transferred:** location memory works in physics — a blind fetch averages one
+wasted look and 652 steps; with memory 0.16 wasted looks and ~430 (video:
+`outputs/sim_videos/fetch_side_by_side.mp4`, 1003 vs 361 steps on one world).
+Memory is worth +14 to +19 points overall, +17 on put, +18 on fetch.
+
+**Two calibration gaps the physics exposed:**
+1. *put_any is trivial in physics* (100% for everyone, no memory needed). The fast
+   drawer saves only ~12 of ~140 open steps — the pull is speed-limited by the
+   controller command, not by drawer damping — and the free-choice budget has no
+   secret in it. Needs either a physically larger shortcut (e.g. a drawer that is
+   already ajar: skip the hook entirely) or a tighter put_any budget. In the abstract
+   env the same task separates cleanly (0.71 vs 0.98) because the shortcut is 3 of 15.
+2. *fetch tops out at ~65% even with memory.* Budget 760 vs known-location cost
+   ~361: a jam on the hidden object's drawer (+350) survives, but any second failure
+   does not, and post-change relocations force a fresh search. Worth a per-kind
+   calibration matrix like the one that fixed `put`.
+
+**Physics-only lessons:** searching a cabinet requires *closing* drawers behind you
+(an open drawer's front blocks the handles below; the abstract sim cannot teach
+this); a hidden object must sit in the *front* of its drawer or a straight lift hits
+the handle bar above; grasps should break on *sustained* overload, not a momentary
+wall bump. All three are in `bench/sim/skill_env.py`.
+
 ## 2026-09-04 — Day 8: Phase 3 begins — property library ×2, task kinds ×3, randomized change events
 
 **Built (abstract env):** two new hidden-property types and two new task kinds,
