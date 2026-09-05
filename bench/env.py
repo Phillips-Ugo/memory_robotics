@@ -134,11 +134,15 @@ class SkillEnv:
 
     def place(self, obj: str, where: str) -> SkillEvent:
         """where: a drawer (put / put_any) or 'table' (fetch)."""
-        ev = self._record("place", where, "ok", COST["place"])
         t = self.task
+        pref = self.world.props.preferred_drawer
+        outcome = "ok"
+        if t.kind == "put_any" and pref is not None and self.holding == obj and where in self.open_drawers:
+            outcome = "praised" if where == pref else "rejected"  # the house rule's feedback
+        ev = self._record("place", where, outcome, COST["place"])
         ok = self.holding == obj and (
             (t.kind == "put" and where == t.drawer and where in self.open_drawers)
-            or (t.kind == "put_any" and where in self.open_drawers)
+            or (t.kind == "put_any" and where in self.open_drawers and outcome != "rejected")
             or (t.kind == "fetch" and where == "table")
         )
         if ok:

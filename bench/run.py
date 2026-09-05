@@ -37,6 +37,8 @@ def relevant_episodes(history: list, task, props) -> set[int]:
                 rel.add(log.episode_idx)
             if task.kind == "put_any" and e.skill == "open" and e.outcome == "ok" and e.steps <= 2 and props.is_fast(e.target):
                 rel.add(log.episode_idx)
+            if task.kind == "put_any" and e.skill == "place" and e.outcome == "praised" and e.target == props.preferred_drawer:
+                rel.add(log.episode_idx)
     return rel
 
 
@@ -167,7 +169,7 @@ def main() -> None:
     ap.add_argument("--change-at", type=int, default=25)
     ap.add_argument("--slack", type=int, default=None, help="override budget slack (default 11; budget = nominal(kind) + slack)")
     ap.add_argument("--extra-changes", type=int, default=0, help="additional random change events after --change-at")
-    ap.add_argument("--properties", default=",".join(("sticky", "heavy", "location", "fast")),
+    ap.add_argument("--properties", default=",".join(("sticky", "heavy", "location", "fast", "preference")),
                     help="property types in the world (v0 was sticky,heavy)")
     ap.add_argument("--kinds", default="put,put_any,fetch", help="task kinds (v0 was put)")
     ap.add_argument("--out", default="outputs/bench_v0")

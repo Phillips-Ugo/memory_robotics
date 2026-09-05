@@ -24,6 +24,8 @@ class Beliefs:
     object_in: dict[str, str] = field(default_factory=dict)  # obj -> drawer it was last found in
     object_not_in: dict[str, set[str]] = field(default_factory=dict)  # obj -> drawers seen empty since
     fast_drawers: set[str] = field(default_factory=set)  # drawers whose open was cheap (success-shaped)
+    preferred_drawer: str | None = None  # house rule, learned from a "praised" placement (success-only)
+    rejected_drawers: set[str] = field(default_factory=set)  # learned by elimination
     # optional: facts the memory wants the planner to re-test cheaply (revision)
     probe_drawers: set[str] = field(default_factory=set)
     probe_objects: set[str] = field(default_factory=set)
@@ -139,6 +141,8 @@ class ConsolidatedKB(Memory):
         self.objects: dict[str, Fact] = defaultdict(Fact)
         self.fast: dict[str, Fact] = defaultdict(Fact)  # drawer -> opens fast
         self.where: dict[str, tuple[str, int]] = {}  # obj -> (drawer, episode last found)
+        self.preferred: tuple[str, int] | None = None  # (drawer, episode praised)
+        self.rejected: dict[str, int] = {}  # drawer -> episode rejected
         self.not_in: dict[str, dict[str, int]] = defaultdict(dict)  # obj -> {drawer: episode seen empty}
         self.t = 0
 
@@ -165,6 +169,13 @@ class ConsolidatedKB(Memory):
                     if self.where.get(obj, (None,))[0] == e.target:
                         del self.where[obj]  # it moved
             # pull_hard / pick_two_hand give no evidence either way (they always work)
+            if e.skill == "place" and e.outcome == "praised":
+                self.preferred = (e.target, self.t)
+                self.rejected = {d: t for d, t in self.rejected.items() if t > self.t}
+            elif e.skill == "place" and e.outcome == "rejected":
+                self.rejected[e.target] = self.t
+                if self.preferred and self.preferred[0] == e.target:
+                    self.preferred = None  # the rule changed
             if e.skill == "open" and e.outcome == "ok":  # success-shaped: cheap open => fast drawer
                 f = self.fast[e.target]
                 f.value, f.evidence, f.last_confirmed = (e.steps <= 2), f.evidence + 1, self.t
@@ -189,6 +200,9 @@ class ConsolidatedKB(Memory):
         for d, f in self.drawers.items():  # all known sticky drawers matter for free-choice tasks
             if f.value and self.t - f.last_confirmed < self.probe_after:
                 b.sticky_drawers.add(d)
+        if self.preferred:
+            b.preferred_drawer = self.preferred[0]
+        b.rejected_drawers = {d for d, t in self.rejected.items() if not self.preferred or t > self.preferred[1]}
         if task.obj in self.where:
             b.object_in[task.obj] = self.where[task.obj][0]
         found_t = self.where.get(task.obj, (None, -1))[1]
@@ -196,7 +210,7 @@ class ConsolidatedKB(Memory):
         return b
 
     def bytes_stored(self) -> int:
-        return 40 * (len(self.drawers) + len(self.objects) + len(self.fast) + len(self.where))
+        return 40 * (len(self.drawers) + len(self.objects) + len(self.fast) + len(self.where) + (1 if self.preferred else 0) + len(self.rejected))
 
 
 def _beliefs_from_logs(logs: list[EpisodeLog]) -> Beliefs:
@@ -217,6 +231,13 @@ def _beliefs_from_logs(logs: list[EpisodeLog]) -> Beliefs:
                     del b.object_in[l.task.obj]
             elif e.skill == "open" and e.outcome == "ok" and e.steps <= 2:
                 b.fast_drawers.add(e.target)
+            elif e.skill == "place" and e.outcome == "praised":
+                b.preferred_drawer = e.target
+                b.rejected_drawers.discard(e.target)
+            elif e.skill == "place" and e.outcome == "rejected":
+                b.rejected_drawers.add(e.target)
+                if b.preferred_drawer == e.target:
+                    b.preferred_drawer = None
     return b
 
 

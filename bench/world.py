@@ -16,7 +16,7 @@ import numpy as np
 
 DRAWERS = ("left", "middle", "right")
 OBJECTS = ("blue_mug", "red_mug", "scissors", "spoon")
-PROPERTY_TYPES = ("sticky", "heavy", "location", "fast")
+PROPERTY_TYPES = ("sticky", "heavy", "location", "fast", "preference")
 
 
 @dataclass(frozen=True)
@@ -28,6 +28,8 @@ class HiddenProps:
     hidden_object: str | None = None  # starts inside `hidden_in` instead of on the table
     hidden_in: str | None = None
     fast_drawer: str | None = None
+    preferred_drawer: str | None = None  # house rule for "put X away": only this drawer counts.
+    # SUCCESS-ONLY evidence: the confirming signal ("praised") appears only in a successful episode.
 
     def is_sticky(self, drawer: str) -> bool:
         return drawer == self.sticky_drawer
@@ -96,7 +98,8 @@ class World:
     def apply_change_event(self, ptype: str | None = None) -> str:
         """Flip one property type. Returns the type flipped."""
         p = self.props
-        ptype = ptype or str(self.rng.choice([t for t in self.property_types if t != "location" or p.hidden_object]))
+        ptype = ptype or str(self.rng.choice([t for t in self.property_types
+                                              if (t != "location" or p.hidden_object) and (t != "preference" or p.preferred_drawer)]))
         self.history.append(p)
         if ptype == "sticky":
             self.props = replace(p, sticky_drawer=str(self.rng.choice([d for d in self.drawers if d != p.sticky_drawer])))
@@ -106,6 +109,8 @@ class World:
             self.props = replace(p, hidden_in=str(self.rng.choice([d for d in self.drawers if d != p.hidden_in])))
         elif ptype == "fast":
             self.props = replace(p, fast_drawer=str(self.rng.choice([d for d in self.drawers if d != p.fast_drawer])))
+        elif ptype == "preference":
+            self.props = replace(p, preferred_drawer=str(self.rng.choice([d for d in self.drawers if d != p.preferred_drawer])))
         return ptype
 
 
@@ -121,6 +126,8 @@ def make_world(world_id: int, seed: int, drawers: tuple[str, ...] = DRAWERS,
         hidden_in = str(rng.choice(drawers))
     if "fast" in property_types:
         fast = str(rng.choice([d for d in drawers if d != sticky]))
-    props = HiddenProps(sticky_drawer=sticky, heavy_object=heavy, hidden_object=hidden, hidden_in=hidden_in, fast_drawer=fast)
+    preferred = str(rng.choice(drawers)) if "preference" in property_types else None
+    props = HiddenProps(sticky_drawer=sticky, heavy_object=heavy, hidden_object=hidden, hidden_in=hidden_in,
+                        fast_drawer=fast, preferred_drawer=preferred)
     return World(world_id=world_id, props=props, rng=rng, drawers=drawers, objects=objects,
                  property_types=property_types, task_kinds=task_kinds)

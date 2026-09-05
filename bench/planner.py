@@ -75,9 +75,13 @@ def run_planner(env: SkillEnv, beliefs: Beliefs) -> None:
     if task.kind == "put":
         drawer = task.drawer
     else:
-        fast = [d for d in drawers if d in beliefs.fast_drawers and d not in beliefs.sticky_drawers]
-        clean = [d for d in drawers if d not in beliefs.sticky_drawers]
-        cands = fast or clean or drawers
+        if beliefs.preferred_drawer in drawers:
+            cands = [beliefs.preferred_drawer]  # the house rule beats everything else
+        else:
+            allowed = [d for d in drawers if d not in beliefs.rejected_drawers] or drawers
+            fast = [d for d in allowed if d in beliefs.fast_drawers and d not in beliefs.sticky_drawers]
+            clean = [d for d in allowed if d not in beliefs.sticky_drawers]
+            cands = fast or clean or allowed
         # no knowledge => no preference: a random pick, so the default cannot coincide
         # with the good drawer by construction
         rng = getattr(env, "rng", None) or getattr(getattr(env, "world", None), "rng", None)
