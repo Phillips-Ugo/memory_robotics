@@ -23,14 +23,15 @@ COST = {
     "pick": 5,
     "pick_two_hand": 9,
     "place": 5,
-    "look_in": 6,  # peek into a drawer; two wasted looks (+12) blow the budget slack
+    "look_in": 4,  # peek into a drawer (+ close 2 if empty = 6 wasted per wrong drawer)
+    "close": 2,
     "jam": 8,  # wasted when open() jams
     "drop": 6,  # wasted when pick() drops
 }
 # per-task-kind nominal (no-secret, no-belief) cost + slack; robust skills cost +4/+5,
 # a drop recovery +10, a jam recovery +13, two wasted looks +12 -> slack 11 makes jams
 # and full searches decisive, drops and single stale actions survivable (Day 6 rule)
-NOMINAL = {"put": 15, "put_any": 15, "fetch": 21}  # fetch = open 5 + look 6 + pick 5 + place 5
+NOMINAL = {"put": 15, "put_any": 15, "fetch": 19}  # fetch = open 5 + look 4 + pick 5 + place 5
 SLACK = 11
 STEP_BUDGET = 26  # kept for bench.sim.calibrate / legacy callers
 
@@ -108,6 +109,10 @@ class SkillEnv:
         if not here:
             self.log.wasted_looks += 1
         return self._record("look_in", drawer, "found" if here else "empty", COST["look_in"])
+
+    def close(self, drawer: str) -> SkillEvent:
+        self.open_drawers.discard(drawer)
+        return self._record("close", drawer, "ok", COST["close"])
 
     def pick(self, obj: str) -> SkillEvent:
         loc = self.world.props.location_of(obj)

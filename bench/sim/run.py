@@ -39,8 +39,10 @@ def load_nominal_steps(calib_log: str) -> dict[tuple[str, str], int]:
     return nominal
 
 
-def run_sequence(memory, world_id: int, seed: int, episodes: int, change_at: int, budget, log_f) -> dict:
-    world = make_world(world_id, seed, drawers=tuple(DRAWERS), objects=tuple(OBJECTS))
+def run_sequence(memory, world_id: int, seed: int, episodes: int, change_at: int, budget, log_f,
+                 property_types=("sticky", "heavy"), task_kinds=("put",)) -> dict:
+    world = make_world(world_id, seed, drawers=tuple(DRAWERS), objects=tuple(OBJECTS),
+                       property_types=tuple(property_types), task_kinds=tuple(task_kinds))
     rows = []
     for ep in range(episodes):
         if ep == change_at:
@@ -48,7 +50,7 @@ def run_sequence(memory, world_id: int, seed: int, episodes: int, change_at: int
         task = world.sample_task()
         beliefs = memory.recall(task, initial_obs={"task": task.text})
         step_budget = budget(task) if callable(budget) else budget
-        env = SimSkillEnv(SimProps(world.props.sticky_drawer, world.props.heavy_object), task, ep,
+        env = SimSkillEnv(SimProps.from_world(world.props), task, ep,
                           step_budget=step_budget, seed=seed * 1000 + world_id * 100 + ep)
         t0 = time.time()
         run_planner(env, beliefs)
@@ -57,11 +59,14 @@ def run_sequence(memory, world_id: int, seed: int, episodes: int, change_at: int
             "memory": memory.name, "seed": seed, "world": world_id, "ep": ep,
             "success": int(env.log.success), "steps": env.log.steps, "budget": step_budget, "stale": env.log.stale_actions,
             "failures": sum(e.outcome in ("jam", "drop") for e in env.log.events),
-            "task": task.text, "props": [world.props.sticky_drawer, world.props.heavy_object],
+            "task": task.text, "kind": task.kind,
+            "props": [world.props.sticky_drawer, world.props.heavy_object, world.props.hidden_object,
+                      world.props.hidden_in, world.props.fast_drawer],
+            "wasted_looks": env.log.wasted_looks,
             "events": [f"{e.skill}({e.target})->{e.outcome}" for e in env.log.events],
             "wall": round(time.time() - t0, 1),
         }
-        env.close()
+        env.shutdown()
         rows.append(row)
         log_f.write(json.dumps(row) + "\n")
         log_f.flush()
@@ -82,12 +87,24 @@ def main() -> None:
                          "[211, 350) makes jams decisive and everything else survivable; 260 leaves ~50 margin")
     ap.add_argument("--calib-log", default="outputs/sim_calibrate3.log")
     ap.add_argument("--memories", default=",".join(BASELINES))
+    ap.add_argument("--properties", default="sticky,heavy", help="e.g. sticky,heavy,location,fast")
+    ap.add_argument("--kinds", default="put", help="e.g. put,put_any,fetch")
+    ap.add_argument("--fetch-slack", type=int, default=400,
+                    help="fetch budget = 360 (known-location cost) + this; one wasted look (~330) survives, two do not")
     ap.add_argument("--out", default="outputs/bench_sim")
     args = ap.parse_args()
 
     nominal = load_nominal_steps(args.calib_log)
-    budget = lambda task: nominal[(task.obj, task.drawer)] + args.budget_slack  # noqa: E731
-    print("per-task budgets:", {f"{o}->{d}": budget(type("T", (), {"obj": o, "drawer": d})) for (o, d) in nominal}, flush=True)
+    import statistics
+    put_median = int(statistics.median(nominal.values()))
+
+    def budget(task):
+        if task.kind == "fetch":
+            return 360 + args.fetch_slack  # measured: known-location fetch ~358-361 from any drawer
+        if task.kind == "put_any":
+            return put_median + args.budget_slack
+        return nominal[(task.obj, task.drawer)] + args.budget_slack
+    print("per-task budgets (put):", {f"{o}->{d}": nominal[(o, d)] + args.budget_slack for (o, d) in nominal}, flush=True)
 
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
@@ -111,7 +128,8 @@ def main() -> None:
                         # partial one: the LAST `episodes` rows are the complete run
                         runs.append({"rows": prev[-args.episodes :], "bytes": 0})
                         continue
-                    runs.append(run_sequence(factory(), w, s, args.episodes, args.change_at, budget, log_f))
+                    runs.append(run_sequence(factory(), w, s, args.episodes, args.change_at, budget, log_f,
+                                             args.properties.split(","), args.kinds.split(",")))
             results[name] = summarize(runs, args.episodes, args.change_at)
             r = results[name]
             print(f"== {name:14s} AUC={r['auc_success']:.3f} pre={r['success_pre_change']:.2f} "

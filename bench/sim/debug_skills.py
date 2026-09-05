@@ -59,7 +59,7 @@ def main() -> None:
     p = Path(args.out) / f"{args.skill}_{'_'.join(args.target)}.png"
     imageio.imwrite(p, strip(env.frames))
     print("filmstrip ->", p)
-    env.close()
+    env.shutdown()
 
 
 if __name__ == "__main__":

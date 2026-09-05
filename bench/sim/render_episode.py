@@ -60,4 +60,4 @@ Path(a.out).mkdir(parents=True, exist_ok=True)
 p = Path(a.out) / f"{a.obj}_{a.drawer}_sticky-{a.sticky}_heavy-{a.heavy}{'_known' if a.believe else ''}{'_zoom' if a.zoom else ''}{'_slow' if a.slowmo else ''}.mp4"
 imageio.mimwrite(p, frames, fps=24, quality=8)
 print(f"{len(frames)} frames -> {p}")
-env.close()
+env.shutdown()

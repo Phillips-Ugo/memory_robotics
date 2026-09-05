@@ -51,7 +51,7 @@ def main() -> None:
                 print(f"{task.obj:17s} {task.drawer:6s} sticky={int(sticky)} heavy={int(heavy)} belief={belief:7s} "
                       f"steps={env.log.steps:4d} success={int(env.log.success)} stale={env.log.stale_actions} | {rows[-1][-1]}",
                       flush=True)
-                env.close()
+                env.shutdown()
 
     steps = np.array([r[4] for r in rows])
     succ = np.array([r[5] for r in rows])

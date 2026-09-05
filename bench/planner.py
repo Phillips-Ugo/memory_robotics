@@ -33,7 +33,7 @@ def _grab(env: SkillEnv, beliefs: Beliefs, obj: str) -> bool:
 
 def run_planner(env: SkillEnv, beliefs: Beliefs) -> None:
     task = env.task
-    drawers = list(env.world.drawers)
+    drawers = list(getattr(env, "drawer_names", None) or env.world.drawers)
 
     if task.kind == "fetch":
         # search order: believed location first, then unknown drawers (sticky ones last),
@@ -49,12 +49,17 @@ def run_planner(env: SkillEnv, beliefs: Beliefs) -> None:
         for d in order:
             if not _open_drawer(env, beliefs, d):
                 return
+            if d not in env.open_drawers:  # couldn't get it open; try the next drawer
+                continue
             ev = env.look_in(d)
             if env.done:
                 return
             if ev.outcome == "found":
                 found = True
                 break
+            env.close(d)  # leave it as you found it, or it blocks the drawers below
+            if env.done:
+                return
         if not found:
             return
         if not _grab(env, beliefs, task.obj):

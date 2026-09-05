@@ -58,6 +58,7 @@ OPEN_DIR_LOCAL = np.array([0.0, -1.0, 0.0])
 HOOK_OFFSET = {"top": (0.05, 0.0), "middle": (0.05, 0.0), "bottom": (0.06, 0.04)}
 
 STICKY_FRICTIONLOSS = 40.0
+FAST_DAMPING = 5.0  # default drawer damping is 50; the gentle pull opens a fast drawer in ~1/3 the steps
 HEAVY_MASS = 0.5  # kg -> ~5 N on the grasp; default boxes ~0.1 N. Heavier made the firm carry physically slow (controller sags)
 GENTLE_LIMIT = 20.0  # N (measured: normal drawer needs 1-4 N sustained, sticky ~32 N)
 FIRM_LIMIT = 80.0  # N
@@ -69,6 +70,13 @@ REACH = 0.035  # m: max eef-to-target distance for the magnetic grasp to engage
 class SimProps:
     sticky_drawer: str
     heavy_object: str
+    hidden_object: str | None = None  # starts inside `hidden_in` (teleported at reset)
+    hidden_in: str | None = None
+    fast_drawer: str | None = None  # low damping: the gentle pull finishes in fewer steps
+
+    @classmethod
+    def from_world(cls, props) -> "SimProps":
+        return cls(props.sticky_drawer, props.heavy_object, props.hidden_object, props.hidden_in, props.fast_drawer)
 
 
 class SimSkillEnv:
@@ -92,10 +100,12 @@ class SimSkillEnv:
         self.obs = self.env.reset()
         self._install_welds()
         self.sim = self.env.sim
-        self._inject_props()
         self.holding: str | None = None
         self._active_eq: int | None = None
         self._limit = GENTLE_LIMIT
+        self._over = 0  # consecutive steps the weld force exceeded the limit
+        self.open_drawers: set[str] = set()
+        self._inject_props()
         self._yaw_to_x()  # once per episode: hand's wide axis along the handle bars
 
     def _finger_axis(self) -> np.ndarray:
@@ -149,7 +159,27 @@ class SimSkillEnv:
         for o, body in OBJ_BODY.items():
             if o == self.props.heavy_object:
                 m.body_mass[m.body_name2id(body)] = HEAVY_MASS
+        if self.props.fast_drawer in DRAWERS:
+            j = m.joint_name2id(f"white_cabinet_1_{self.props.fast_drawer}_level")
+            m.dof_damping[m.jnt_dofadr[j]] = FAST_DAMPING
+        if self.props.hidden_object in OBJECTS and self.props.hidden_in in DRAWERS:
+            # teleport the hidden object onto the floor of its drawer (drawer closed)
+            jname = f"{OBJECTS[self.props.hidden_object]}_joint0"
+            addr = m.get_joint_qpos_addr(jname)
+            floor = self._drawer_region_world(self.props.hidden_in)
+            _, open_dir = self._handle_world(self.props.hidden_in)
+            q = self.sim.data.qpos.copy()
+            # front part of the drawer: once opened, a straight lift clears the handle
+            # bar of the drawer above and the drawer's own front panel
+            q[addr[0]:addr[0] + 3] = floor + open_dir * 0.045 + np.array([0.0, 0.0, 0.03])
+            q[addr[0] + 3:addr[0] + 7] = np.array([1.0, 0.0, 0.0, 0.0])
+            self.sim.data.qpos[:] = q
+            self.sim.data.qvel[:] = 0
         self.sim.forward()
+        for _ in range(20):  # let it settle
+            self._step(np.array([0, 0, 0, 0, 0, 0, -1.0]))
+        self.log.steps = 0
+        self.log.events.clear()
 
     # ---- magnetic grasp ---------------------------------------------------
     def _attach(self, body: str, limit: float) -> bool:
@@ -168,7 +198,7 @@ class SimSkillEnv:
         m.eq_data[eq, 3:6] = rel_p
         m.eq_data[eq, 6:10] = rel_q
         m.eq_active[eq] = 1
-        self._active_eq, self._limit = eq, limit
+        self._active_eq, self._limit, self._over = eq, limit, 0
         return True
 
     def _detach(self) -> None:
@@ -209,8 +239,13 @@ class SimSkillEnv:
     def _step(self, action: np.ndarray) -> None:
         self.obs, _, _, _ = self.env.step(action)
         self.log.steps += 1
-        if self._active_eq is not None and self._weld_force() > self._limit:
-            self._detach()  # grasp broke
+        if self._active_eq is not None:
+            # a sustained overload (an object's weight) breaks the grasp; a momentary
+            # bump (brushing a drawer wall) does not
+            self._over = self._over + 1 if self._weld_force() > self._limit else 0
+            if self._over >= 4:
+                self._detach()
+                self._over = 0
         if self.render and self.log.steps % self.render_every == 0:
             self.frames.append(self.obs["agentview_image"][::-1].copy())
         if self.log.steps > self.step_budget:
@@ -264,6 +299,8 @@ class SimSkillEnv:
                    max_delta=(1.0 if firm else 0.6))
         self._detach()
         self._move(self._eef() + np.array([0, 0, 0.10]), grip=-1.0, max_steps=40)
+        if self._drawer_qpos(drawer) < -0.08:
+            self.open_drawers.add(drawer)
         return self._drawer_qpos(drawer) - q0
 
     def open(self, drawer: str) -> SkillEvent:
@@ -281,6 +318,9 @@ class SimSkillEnv:
         return self._record("pull_hard", drawer, "ok" if moved < -0.08 else "jam", self.log.steps - s0)
 
     def _grasp_and_lift(self, obj: str, firm: bool) -> float:
+        for d in DRAWERS:  # inside a closed drawer -> unreachable
+            if d not in self.open_drawers and self._in_drawer(obj, d):
+                return float("nan")
         p = self._obj_pos(obj)
         grasp = p + np.array([0, 0, 0.02])
         self._move(grasp + np.array([0, 0, 0.12]), grip=-1.0, max_steps=150)
@@ -300,6 +340,8 @@ class SimSkillEnv:
     def pick(self, obj: str) -> SkillEvent:
         s0 = self.log.steps
         rose = self._grasp_and_lift(obj, firm=False)
+        if rose != rose:  # nan: in a closed drawer
+            return self._record("pick", obj, "not_here", self.log.steps - s0)
         ok = rose > 0.08 and self._active_eq is not None
         if not ok:
             self._detach()
@@ -311,6 +353,8 @@ class SimSkillEnv:
         if obj != self.props.heavy_object:
             self.log.stale_actions += 1
         rose = self._grasp_and_lift(obj, firm=True)
+        if rose != rose:
+            return self._record("pick_firm", obj, "not_here", self.log.steps - s0)
         ok = rose > 0.08 and self._active_eq is not None
         if not ok:
             self._detach()
@@ -319,7 +363,67 @@ class SimSkillEnv:
 
     pick_two_hand = pick_firm  # the shared planner's name for the robust pick
 
+    def _in_drawer(self, obj: str, drawer: str) -> bool:
+        p = self._obj_pos(obj)
+        r = self._drawer_region_world(drawer)
+        return abs(p[0] - r[0]) < 0.11 and abs(p[1] - r[1]) < 0.12 and abs(p[2] - r[2]) < 0.08
+
+    def look_in(self, drawer: str) -> SkillEvent:
+        """Open the drawer if needed (gentle), hover over its exposed section, check."""
+        s0 = self.log.steps
+        if drawer not in self.open_drawers:
+            ev = self.open(drawer)
+            if ev.outcome != "ok":
+                return ev
+        handle, open_dir = self._handle_world(drawer)
+        spot = handle - open_dir * 0.085
+        spot[2] = self._drawer_region_world(drawer)[2] + 0.18
+        self._move(spot, grip=-1.0, max_steps=100)
+        self._hold(-1.0, 10)  # "looking"
+        here = self._in_drawer(self.task.obj, drawer)
+        if not here:
+            self.log.wasted_looks += 1
+        return self._record("look_in", drawer, "found" if here else "empty", self.log.steps - s0)
+
+    def close(self, drawer: str) -> SkillEvent:
+        """Push an open drawer shut (magnetic hook on the handle, move it back in)."""
+        s0 = self.log.steps
+        if drawer not in self.open_drawers:
+            return self._record("close", drawer, "ok", 0)
+        handle, open_dir = self._handle_world(drawer)
+        front, up = HOOK_OFFSET[drawer]
+        hook = handle + open_dir * front + np.array([0, 0, up])
+        self._move(hook + np.array([0, 0, 0.10]), grip=1.0, max_steps=120)
+        self._move(hook, grip=1.0, max_steps=100, tol=0.008)
+        self._hold(1.0, 6)
+        if np.linalg.norm(self._eef() - hook) <= REACH:
+            self._attach(DRAWER_BODY[drawer], FIRM_LIMIT)
+            self._move(self._eef() - open_dir * 0.16, grip=1.0, gain=6.0, max_steps=90, tol=0.01, max_delta=0.8)
+            self._detach()
+        self._move(self._eef() + np.array([0, 0, 0.10]), grip=-1.0, max_steps=40)
+        closed = self._drawer_qpos(drawer) > -0.03
+        if closed:
+            self.open_drawers.discard(drawer)
+        return self._record("close", drawer, "ok" if closed else "stuck_open", self.log.steps - s0)
+
+    def place_table(self, obj: str) -> SkillEvent:
+        s0 = self.log.steps
+        spot = np.array([-0.10, -0.05, 0.99])  # free patch of table in front of the robot
+        self._move(spot + np.array([0, 0, 0.15]), grip=1.0, max_steps=150)
+        self._move(spot, grip=1.0, max_steps=80, tol=0.01)
+        self._detach()
+        self._hold(-1.0, 8)
+        self._move(self._eef() + np.array([0, 0, 0.12]), grip=-1.0, max_steps=60)
+        ev = self._record("place", "table", "ok", self.log.steps - s0)
+        p = self._obj_pos(obj)
+        on_table = p[2] < 0.96 and not any(self._in_drawer(obj, d) for d in DRAWERS)
+        self.log.success = bool(on_table and self.task.kind == "fetch" and self.log.steps <= self.step_budget)
+        self.done = True
+        return ev
+
     def place(self, obj: str, drawer: str) -> SkillEvent:
+        if drawer == "table":
+            return self.place_table(obj)
         s0 = self.log.steps
         # release in the EXPOSED front section of the open drawer (the interior centre is
         # under the drawer above it): ~8.5 cm behind the handle bar, just above the floor
@@ -339,9 +443,11 @@ class SimSkillEnv:
         # spot in y (front-to-back), on the floor, and the drawer actually open
         inside = (abs(p[0] - spot[0]) < 0.10 and abs(p[1] - spot[1]) < 0.07 and abs(p[2] - floor_z) < 0.06
                   and self._drawer_qpos(drawer) < -0.08)
-        self.log.success = bool(inside and drawer == self.task.drawer and self.log.steps <= self.step_budget)
+        kind = getattr(self.task, "kind", "put")
+        right_drawer = (kind == "put_any") or drawer == self.task.drawer
+        self.log.success = bool(inside and right_drawer and self.log.steps <= self.step_budget)
         self.done = True
         return ev
 
-    def close(self) -> None:
+    def shutdown(self) -> None:
         self.env.close()
