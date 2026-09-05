@@ -43,8 +43,10 @@ def relevant_episodes(history: list, task, props) -> set[int]:
 
 
 def run_sequence(memory: Memory, world_id: int, seed: int, episodes: int, change_at: int,
-                 extra_changes: int = 0, property_types=None, task_kinds=None) -> dict:
+                 extra_changes: int = 0, property_types=None, task_kinds=None, drawers=None) -> dict:
     kw = {}
+    if drawers:
+        kw["drawers"] = tuple(drawers)
     if property_types:
         kw["property_types"] = tuple(property_types)
     if task_kinds:

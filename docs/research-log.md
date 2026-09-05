@@ -1,5 +1,29 @@
 # Research log
 
+## 2026-09-05 — Day 9c: X3 flips when elimination is expensive
+
+Follow-up to Day 9b: 10 drawers instead of 3, `put_any` tasks only, secrets = sticky
+drawer + house rule (30 worlds × 50 × 3 seeds, abstract env). No-memory = 0.08.
+
+| fed with | last-5 | retrieval | consolidated |
+|---|---|---|---|
+| everything | 0.76 | 0.67 | **0.81** |
+| successes only | 0.51 | 0.51 | 0.51 |
+| failures only | **0.26** | 0.24 | 0.62 |
+
+With three drawers, two rejections identified the right one and failures-only
+memory won (Days 7c, 9b). With ten, the raw-log failure-only memories collapse
+(0.26 — the last five failures never contain the one praised placement), and only
+the consolidated store salvages it by accumulating eliminations (0.62). Fed
+everything, consolidated is best (0.81).
+
+**Revised principle:** failures are the information-dense episodes when the option
+space is small; when it is large, a single confirming success is worth more than
+any number of eliminations. A memory layer must keep both — failures to learn what
+to avoid, the confirming success to learn what to do — and the balance is a property
+of the *world's branching factor*, which the benchmark should vary explicitly
+(3 vs 10 options is now a one-flag change: `run_sequence(..., drawers=...)`).
+
 ## 2026-09-05 — Day 9b: the success-only property, and what X3 looks like with it
 
 **Added** `preference` (abstract env): a house rule for "put X away" — only one
