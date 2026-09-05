@@ -366,7 +366,9 @@ class SimSkillEnv:
     def _in_drawer(self, obj: str, drawer: str) -> bool:
         p = self._obj_pos(obj)
         r = self._drawer_region_world(drawer)
-        return abs(p[0] - r[0]) < 0.11 and abs(p[1] - r[1]) < 0.12 and abs(p[2] - r[2]) < 0.08
+        # drawers are ~7 cm apart vertically: keep the z window tighter than that, or an
+        # object in the open drawer below "is inside" the closed one above
+        return abs(p[0] - r[0]) < 0.11 and abs(p[1] - r[1]) < 0.14 and -0.035 < (p[2] - r[2]) < 0.045
 
     def look_in(self, drawer: str) -> SkillEvent:
         """Open the drawer if needed (gentle), hover over its exposed section, check."""

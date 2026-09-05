@@ -40,6 +40,9 @@ def run_planner(env: SkillEnv, beliefs: Beliefs) -> None:
         # then drawers seen empty since the last sighting
         empty = beliefs.object_not_in.get(task.obj, set())
         rest = [d for d in drawers if d not in empty]
+        rng = getattr(env, "rng", None) or getattr(getattr(env, "world", None), "rng", None)
+        if rng is not None:  # unknown drawers in random order (no free information from a fixed order)
+            rest = [rest[i] for i in rng.permutation(len(rest))]
         rest.sort(key=lambda d: d in beliefs.sticky_drawers)
         order = rest + [d for d in drawers if d in empty]
         if task.obj in beliefs.object_in and beliefs.object_in[task.obj] in order:
@@ -74,7 +77,11 @@ def run_planner(env: SkillEnv, beliefs: Beliefs) -> None:
     else:
         fast = [d for d in drawers if d in beliefs.fast_drawers and d not in beliefs.sticky_drawers]
         clean = [d for d in drawers if d not in beliefs.sticky_drawers]
-        drawer = (fast or clean or drawers)[0]
+        cands = fast or clean or drawers
+        # no knowledge => no preference: a random pick, so the default cannot coincide
+        # with the good drawer by construction
+        rng = getattr(env, "rng", None) or getattr(getattr(env, "world", None), "rng", None)
+        drawer = str(rng.choice(cands)) if rng is not None else cands[0]
 
     if not _open_drawer(env, beliefs, drawer):
         return

@@ -52,6 +52,7 @@ def run_sequence(memory, world_id: int, seed: int, episodes: int, change_at: int
         step_budget = budget(task) if callable(budget) else budget
         env = SimSkillEnv(SimProps.from_world(world.props), task, ep,
                           step_budget=step_budget, seed=seed * 1000 + world_id * 100 + ep)
+        env.rng = world.rng  # the planner's no-knowledge choices draw from the world's stream
         t0 = time.time()
         run_planner(env, beliefs)
         memory.observe(env.log)
