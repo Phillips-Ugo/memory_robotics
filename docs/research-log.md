@@ -1,5 +1,30 @@
 # Research log
 
+## 2026-09-05 — Day 9b: the success-only property, and what X3 looks like with it
+
+**Added** `preference` (abstract env): a house rule for "put X away" — only one
+drawer counts. Placing there yields `place->praised` (evidence that exists only in a
+*successful* episode); elsewhere yields `place->rejected` (elimination evidence).
+No-memory success on the full world drops to 0.34 (random 1-in-3 on put_any).
+
+**X3 with it present** (30 × 50 × 3): overall, failures-only is *still* best
+(0.92 vs 0.79 fed-everything for last-5). On put_any specifically — the only task the
+rule touches — consolidated fed everything (0.85) now matches failures-only (0.84),
+and success-only memory is worthless everywhere (0.44–0.57).
+
+**Reading:** in a three-drawer world, rejection is nearly as informative as praise
+(two rejections identify the third drawer), so failure-only learners still catch up.
+"Failures carry the signal" is robust to a success-confirmed property; it would only
+flip where elimination is expensive (many options) — a 10-drawer variant is the
+right test, and a cheap one. Kept `preference` in the default property set: it
+makes put_any a real memory task (no-knowledge = 1/3) rather than a free one.
+
+**Bugs fixed today from reading failures, not averages:** the "object is inside
+drawer X" test used an 8 cm z-window with drawers 7 cm apart (an object in the open
+bottom drawer also tested as inside the closed middle one → `pick -> not_here`);
+and the naive planner's fixed default drawer (top) coincided with the fast drawer in
+5/6 sampled worlds — no-knowledge choices now draw from the world's RNG.
+
 ## 2026-09-05 — Day 9: Phase 3 world in physics — first numbers, and two calibration gaps
 
 `bench/sim/run.py --properties sticky,heavy,location,fast --kinds put,put_any,fetch`,
