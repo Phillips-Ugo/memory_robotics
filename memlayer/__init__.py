@@ -6,6 +6,6 @@
     beliefs = mem.recall(task)        # before each task (structured)
     text = mem.recall_text(task)      # same, rendered for an LLM/VLA prompt
 """
-from .core import MemoryLayer
+from .core import MemoryLayer, RevisionPolicy
 
-__all__ = ["MemoryLayer"]
+__all__ = ["MemoryLayer", "RevisionPolicy"]

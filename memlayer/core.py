@@ -19,6 +19,29 @@ from typing import Iterable
 
 from bench.memory import Beliefs
 
+
+@dataclass
+class RevisionPolicy:
+    """Per fact type (Day 9e): facts whose staleness merely costs efficiency are
+    re-tested on a schedule (or never, when P(change)*cost(stale) < cost(probe));
+    facts whose staleness fails the task (location, house rule) are revised by the
+    contradiction the failure produces, no schedule needed."""
+
+    probe_after: dict[str, int | None] = None  # attribute -> episodes between re-tests (None = never)
+    decay_after: int = 40  # confidence halves every this many episodes without confirmation
+
+    def __post_init__(self):
+        if self.probe_after is None:
+            self.probe_after = {"sticky": 8, "heavy": 8, "location": None, "preferred_drawer": None, "fast": None}
+
+    def should_probe(self, attribute: str, age: int) -> bool:
+        k = self.probe_after.get(attribute)
+        return k is not None and age >= k
+
+    def confidence(self, evidence: int, age: int, contradictions: int = 0) -> float:
+        base = 1 - 0.5 ** evidence
+        return base * 0.5 ** (age / self.decay_after) * 0.5 ** contradictions
+
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS episodes (
     idx INTEGER PRIMARY KEY, task TEXT, kind TEXT, obj TEXT, drawer TEXT,
@@ -47,10 +70,12 @@ class Fact:
 class MemoryLayer:
     name = "memlayer-L1"
 
-    def __init__(self, path: str | Path = ":memory:", probe_after: int = 8) -> None:
+    def __init__(self, path: str | Path = ":memory:", probe_after: int | None = 8,
+                 policy: RevisionPolicy | None = None) -> None:
         self.db = sqlite3.connect(str(path))
         self.db.executescript(SCHEMA)
-        self.probe_after = probe_after
+        self.policy = policy or RevisionPolicy(probe_after={"sticky": probe_after, "heavy": probe_after,
+                                                            "location": None, "preferred_drawer": None, "fast": None})
         self.t = int(self.db.execute("SELECT COALESCE(MAX(idx), 0) FROM episodes").fetchone()[0])
 
     # ---- tier 2/3 primitives ------------------------------------------------
@@ -115,7 +140,10 @@ class MemoryLayer:
         self.db.commit()
 
     def _fresh(self, f: Fact) -> bool:
-        return self.t - f.last_confirmed < self.probe_after
+        return not self.policy.should_probe(f.attribute, self.t - f.last_confirmed)
+
+    def confidence(self, f: Fact) -> float:
+        return self.policy.confidence(f.evidence, self.t - f.last_confirmed, int(f.last_contradicted > f.last_confirmed))
 
     def recall(self, task, initial_obs: dict | None = None) -> Beliefs:
         b = Beliefs()
@@ -167,8 +195,8 @@ class MemoryLayer:
         if f is None:
             return f"no fact for {entity}.{attribute}"
         eps = ", ".join(str(i) for i in f.sources[-5:])
-        return (f"{entity}.{attribute} = {f.value}: {f.evidence} observation(s), last confirmed at episode "
-                f"{f.last_confirmed}, last contradicted at {f.last_contradicted}; evidence episodes: {eps}")
+        return (f"{entity}.{attribute} = {f.value} (confidence {self.confidence(f):.2f}): {f.evidence} observation(s), "
+                f"last confirmed at episode {f.last_confirmed}, last contradicted at {f.last_contradicted}; evidence episodes: {eps}")
 
     def bytes_stored(self) -> int:
         return 40 * self.db.execute("SELECT COUNT(*) FROM facts").fetchone()[0]
