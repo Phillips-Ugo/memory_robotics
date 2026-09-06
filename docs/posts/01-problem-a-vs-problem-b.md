@@ -121,3 +121,36 @@ Real physics (MuJoCo, Panda arm), 600 episodes per memory. Code, chart, videos:
 github.com/Phillips-Ugo/memory_robotics
 
 Video: docs/figures/side_by_side_2026-09-04.mp4
+
+
+# Post #3 — "The robot that never doubts itself" (drafted 2026-09-05; refine in your voice)
+
+Video: docs/figures/day_in_the_life_2026-09-05.mp4 (50 tasks, memory overlay) or
+docs/figures/side_by_side_2026-09-04.mp4
+
+I ran a robot through 50 tasks in one kitchen and watched its memory fill up.
+
+Task 2: "the bottom drawer sticks." Task 3: "the cream cheese is heavy." Task 10:
+"the butter lives in the middle drawer." By task 15 it goes straight to the hard
+pull, the firm grip, the right drawer. No retraining. Two function calls: observe()
+after every task, recall() before.
+
+Then I changed the world behind its back. Now the pudding is the heavy one.
+
+Here's what surprised me this week: I tested memories that re-check their old
+beliefs every 2, 4, 8, 16 tasks — or never. The one that NEVER re-checks won.
+
+Not because doubting is bad. Because in this kitchen, acting on a stale belief
+costs 5 steps and checking costs 6. Doubt only pays when P(the world changed) ×
+cost(being wrong) beats cost(checking). For "where is the butter," being wrong
+fails the whole task — so the failure itself does the checking. For "does this
+drawer stick," being wrong is cheap — so the rational memory never asks again.
+
+A memory layer needs a different revision rule for every kind of fact. That's the
+recipe I'm building now, and the benchmark exists to test each rule.
+
+Also this week: a physics bug that made objects "vanish" from drawers, a planner
+that was secretly cheating by always picking the top drawer, and the discovery that
+failure-only memory is best with 3 drawers and worst with 10. All in the log.
+
+github.com/Phillips-Ugo/memory_robotics
