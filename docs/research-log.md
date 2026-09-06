@@ -1,5 +1,27 @@
 # Research log
 
+## 2026-09-05 — Day 9f: Phase 3 physics, clean (5 worlds × 24 episodes, 480 episodes)
+
+After the fetch fixes (Day 9d): `docs/figures/bench_sim_p3c_*`.
+
+| memory | AUC | pre → post | put | put_any | fetch | wasted looks/fetch | stale (post) |
+|---|---|---|---|---|---|---|---|
+| none | 0.42 | 0.46 → 0.32 | 0.44 | 0.48 | 0.30 | 0.83 | 0.2 |
+| last-5 | 0.78 | 0.88 → 0.74 | 0.74 | 0.93 | 0.63 | 0.40 | 1.6 |
+| retrieval | 0.82 | 0.90 → 0.80 | 0.82 | 0.84 | 0.77 | 0.17 | 2.2 |
+| consolidated | **0.85** | 0.90 → **0.82** | **0.86** | 0.86 | **0.82** | 0.18 | 1.0 |
+
+Memory is worth **+43 points** in the full physics world; fetch goes 0.30 → 0.82; no
+fetch failure involves a drop any more. Consolidated leads on AUC, on put, on fetch,
+and after the change event, with half retrieval's stale actions; retrieval leads
+before the change (its usual pattern). Steps tell the same story: fetch 723 → 547.
+Intervals are still ~±10 at n=5 worlds — a 10×2 run is the next background job.
+
+**Physics vs abstract, same world design:** abstract none 0.34 / consolidated 0.87;
+physics 0.42 / 0.85. The abstract simulator predicted the physics ranking and the
+size of every effect to within a few points, after six physics-only lessons were
+folded back in. That is the argument for the two-tier design.
+
 ## 2026-09-05 — Day 9e: X4 — when is revision worth it? (probe-rate sweep)
 
 Abstract env, 30 worlds × 60 episodes × 3 seeds, three change events (ep 20 + two

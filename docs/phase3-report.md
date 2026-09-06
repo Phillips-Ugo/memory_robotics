@@ -101,8 +101,9 @@ revision rule (the library prototype). LLM-summary baseline: TODO.
   (0.95) even with a success-shaped secret present, but cannot un-learn (stale 6.6).
 - **Retrieval P/R** vs ground truth: last-5 0.13/0.33, retrieval 0.16/0.50.
 - **Phase 3 world, abstract** (Day 8): per-kind — memory +24 on put, +27 on put_any,
-  +50 on fetch. **Physics, corrected** (Day 9d): none 0.43 → consolidated 0.80 AUC;
-  +41 put, +40 put_any, +29 fetch.
+  +50 on fetch. **Physics, clean** (Day 9f, 480 eps): none 0.42 → consolidated
+  0.85 AUC; put 0.44 → 0.86, put_any 0.48 → 0.86, fetch 0.30 → 0.82; consolidated
+  best after the change (0.82) with half retrieval's stale actions.
 - **X3 at 10 drawers** (Day 9c): failures-only memory collapses (0.26) when
   elimination is expensive; fed-everything consolidated 0.81. Branching factor is an
   axis of the benchmark.
