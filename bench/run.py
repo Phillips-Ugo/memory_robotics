@@ -43,7 +43,8 @@ def relevant_episodes(history: list, task, props) -> set[int]:
 
 
 def run_sequence(memory: Memory, world_id: int, seed: int, episodes: int, change_at: int,
-                 extra_changes: int = 0, property_types=None, task_kinds=None, drawers=None) -> dict:
+                 extra_changes: int = 0, property_types=None, task_kinds=None, drawers=None,
+                 p_touch: float = 0.7) -> dict:
     kw = {}
     if drawers:
         kw["drawers"] = tuple(drawers)
@@ -60,7 +61,7 @@ def run_sequence(memory: Memory, world_id: int, seed: int, episodes: int, change
     for ep in range(episodes):
         if ep in change_eps:
             world.apply_change_event()
-        task = world.sample_task()
+        task = world.sample_task(p_touch=p_touch)
         beliefs = memory.recall(task, initial_obs={"task": task.text})
         rel = relevant_episodes(history, task, world.props)
         surf = set(memory.surfaced(task))
@@ -81,6 +82,10 @@ def run_sequence(memory: Memory, world_id: int, seed: int, episodes: int, change
                 "ret_recall": recl,
                 "wasted_looks": env.log.wasted_looks,
                 "kind": task.kind,
+                "touch": int(  # does this task involve a secret (under the current world)?
+                    (task.kind == "put" and (world.props.is_sticky(task.drawer) or world.props.is_heavy(task.obj)))
+                    or (task.kind == "fetch")
+                    or (task.kind == "put_any" and (world.props.is_heavy(task.obj) or world.props.preferred_drawer is not None))),
             }
         )
     return {"rows": rows, "bytes": memory.bytes_stored()}
@@ -174,6 +179,9 @@ def main() -> None:
     ap.add_argument("--properties", default=",".join(("sticky", "heavy", "location", "fast", "preference")),
                     help="property types in the world (v0 was sticky,heavy)")
     ap.add_argument("--kinds", default="put,put_any,fetch", help="task kinds (v0 was put)")
+    ap.add_argument("--p-touch", type=float, default=0.7,
+                    help="probability a task touches a secret; 1 - p_touch is the interference rate (irrelevant tasks)")
+    ap.add_argument("--memories", default=None, help="comma list; default = all baselines")
     ap.add_argument("--out", default="outputs/bench_v0")
     args = ap.parse_args()
     if args.slack is not None:
@@ -182,10 +190,12 @@ def main() -> None:
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     results = {}
-    for name, factory in BASELINES.items():
+    names = args.memories.split(",") if args.memories else list(BASELINES)
+    for name in names:
+        factory = BASELINES[name]
         runs = [
             run_sequence(factory(), w, s, args.episodes, args.change_at, args.extra_changes,
-                         args.properties.split(","), args.kinds.split(","))
+                         args.properties.split(","), args.kinds.split(","), None, args.p_touch)
             for s in range(args.seeds)
             for w in range(args.worlds)
         ]

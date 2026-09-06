@@ -92,21 +92,53 @@ class Retrieval(Memory):
     drawer/object (v0 stand-in for embedding similarity: token overlap on the task
     text). Never forgets, never revises — the RoboMME-Interference fix, in spirit."""
 
-    def __init__(self, top_k: int = 5) -> None:
+    def __init__(self, top_k: int = 5, mode: str = "overlap") -> None:
         self.top_k = top_k
+        self.mode = mode  # "overlap": token overlap on the task text; "tfidf": cosine over the full log text
         self.logs: list[EpisodeLog] = []
 
     @property
     def name(self) -> str:  # type: ignore[override]
-        return f"retrieval-top{self.top_k}"
+        return f"retrieval-{self.mode}-top{self.top_k}"
 
     def observe(self, log: EpisodeLog) -> None:
         self.logs.append(log)
 
     def _top(self, task: Task) -> list[EpisodeLog]:
+        if self.mode == "tfidf":
+            return self._top_tfidf(task)
         q = set(task.text.split())
         return sorted(self.logs, key=lambda l: (len(q & set(l.task.text.split())), l.episode_idx),
                       reverse=True)[: self.top_k]
+
+    def _top_tfidf(self, task: Task) -> list[EpisodeLog]:
+        """Embedding-style retrieval stand-in: TF-IDF cosine between the query text and
+        each stored episode's full log text (task + events). Recency breaks ties."""
+        import math
+        import re
+        from collections import Counter
+        tok = lambda s: re.findall(r"[a-z_]+", s.lower())  # noqa: E731
+        docs = [Counter(tok(l.text)) for l in self.logs]
+        if not docs:
+            return []
+        df = Counter()
+        for d in docs:
+            df.update(d.keys())
+        n = len(docs)
+        idf = {w: math.log((n + 1) / (c + 1)) + 1 for w, c in df.items()}
+        q = Counter(tok(task.text))
+        def vec(c):
+            return {w: (1 + math.log(f)) * idf.get(w, 1.0) for w, f in c.items()}
+        qv = vec(q)
+        qn = math.sqrt(sum(v * v for v in qv.values())) or 1.0
+        scored = []
+        for l, d in zip(self.logs, docs):
+            dv = vec(d)
+            dn = math.sqrt(sum(v * v for v in dv.values())) or 1.0
+            cos = sum(qv[w] * dv[w] for w in qv if w in dv) / (qn * dn)
+            scored.append((cos, l.episode_idx, l))
+        scored.sort(key=lambda x: (x[0], x[1]), reverse=True)
+        return [l for _, _, l in scored[: self.top_k]]
 
     def recall(self, task: Task, initial_obs: dict) -> Beliefs:
         return _beliefs_from_logs(self._top(task))
@@ -249,5 +281,6 @@ BASELINES = {
     "none": lambda: NoMemory(),
     "last-5": lambda: LastK(5),
     "retrieval": lambda: Retrieval(5),
+    "retrieval-tfidf": lambda: Retrieval(5, mode="tfidf"),
     "consolidated": lambda: ConsolidatedKB(8),
 }
