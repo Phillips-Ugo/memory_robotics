@@ -293,9 +293,12 @@ class SimSkillEnv:
             return 0.0
         self._attach(DRAWER_BODY[drawer], FIRM_LIMIT if firm else GENTLE_LIMIT)
         q0 = self._drawer_qpos(drawer)
-        target = self._eef() + open_dir * 0.15
+        # the firm pull fights 40 N of friction and travels less per step: give it a longer
+        # target/time so a sticky drawer ends as far open as a normal one (~14 cm) — otherwise
+        # an object inside sits under the handle of the drawer above and cannot be lifted
+        target = self._eef() + open_dir * (0.19 if firm else 0.15)
         # force ~ commanded delta (clipped at max_delta): gentle caps at ~16 N, firm reaches ~50 N
-        self._move(target, grip=1.0, gain=(8.0 if firm else 4.0), max_steps=(140 if firm else 90), tol=0.01,
+        self._move(target, grip=1.0, gain=(8.0 if firm else 4.0), max_steps=(190 if firm else 90), tol=0.01,
                    max_delta=(1.0 if firm else 0.6))
         self._detach()
         self._move(self._eef() + np.array([0, 0, 0.10]), grip=-1.0, max_steps=40)
@@ -330,6 +333,12 @@ class SimSkillEnv:
             return 0.0
         self._attach(OBJ_BODY[obj], FIRM_LIMIT if firm else GRIP_LIGHT_LIMIT)
         z0 = self._obj_pos(obj)[2]
+        for d in DRAWERS:  # inside an open drawer: slide it forward first, clear of the handle above
+            if d in self.open_drawers and self._in_drawer(obj, d):
+                _, open_dir = self._handle_world(d)
+                self._move(self._eef() + open_dir * 0.05 + np.array([0, 0, 0.01]), grip=1.0, gain=6.0,
+                           max_steps=40, tol=0.01, max_delta=0.6)
+                break
         # lift force ~ commanded delta, so a slow lift cannot raise the heavy object: both
         # variants lift at full gain; firm differs in grasp limit + brace, not in speed
         self._move(self._eef() + np.array([0, 0, 0.15]), grip=1.0, gain=10.0,
@@ -337,9 +346,15 @@ class SimSkillEnv:
         self._hold(1.0, 5)
         return self._obj_pos(obj)[2] - z0
 
+    def _in_open_drawer(self, obj: str) -> bool:
+        return any(d in self.open_drawers and self._in_drawer(obj, d) for d in DRAWERS)
+
     def pick(self, obj: str) -> SkillEvent:
         s0 = self.log.steps
-        rose = self._grasp_and_lift(obj, firm=False)
+        # lifting out of a drawer is always the careful maneuver (the hand brushes the
+        # drawer walls; against a sticky drawer that brush is a sustained load): use the
+        # firm grip there without recording it as the robust skill
+        rose = self._grasp_and_lift(obj, firm=self._in_open_drawer(obj))
         if rose != rose:  # nan: in a closed drawer
             return self._record("pick", obj, "not_here", self.log.steps - s0)
         ok = rose > 0.08 and self._active_eq is not None

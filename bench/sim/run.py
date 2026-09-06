@@ -91,7 +91,7 @@ def main() -> None:
     ap.add_argument("--properties", default="sticky,heavy", help="e.g. sticky,heavy,location,fast")
     ap.add_argument("--kinds", default="put", help="e.g. put,put_any,fetch")
     ap.add_argument("--fetch-slack", type=int, default=400,
-                    help="fetch budget = 360 (known-location cost) + this; one wasted look (~330) survives, two do not")
+                    help="fetch budget = 420 (known-location cost) + this; one wasted look (~330) survives, two do not")
     ap.add_argument("--out", default="outputs/bench_sim")
     args = ap.parse_args()
 
@@ -101,7 +101,7 @@ def main() -> None:
 
     def budget(task):
         if task.kind == "fetch":
-            return 360 + args.fetch_slack  # measured: known-location fetch ~358-361 from any drawer
+            return 420 + args.fetch_slack  # measured: known-location fetch ~420 from any drawer (careful in-drawer lift)
         if task.kind == "put_any":
             return put_median + args.budget_slack
         return nominal[(task.obj, task.drawer)] + args.budget_slack

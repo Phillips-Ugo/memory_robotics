@@ -1,5 +1,42 @@
 # Research log
 
+## 2026-09-05 — Day 9d: Phase 3 physics, corrected (bugs out), and three more physics lessons
+
+Rerun after the in-drawer-test and random-default fixes (4 worlds × 24 episodes,
+change at 12; `docs/figures/bench_sim_p3b_*`):
+
+| memory | AUC | put | put_any | fetch | wasted looks/fetch |
+|---|---|---|---|---|---|
+| none | 0.43 | 0.44 | 0.46 | 0.36 | 0.86 |
+| last-5 | 0.77 | 0.74 | 0.92 | 0.58 | 0.42 |
+| retrieval | 0.77 | 0.84 | 0.84 | 0.59 | 0.22 |
+| consolidated | **0.80** | 0.85 | 0.86 | 0.65 | 0.23 |
+
+No-memory fell from 0.68 to 0.43 once the naive planner stopped getting free
+information from a fixed default drawer; memory is now worth +34 to +37 points in
+the full physics world (was +11–14). put_any separates properly (0.46 vs 0.84–0.92).
+`not_here` phantom failures: 0.
+
+**Fetch still ~0.6 with memory — traced to three physics effects, all fixed:**
+1. After a *hard* pull a sticky drawer opened only 11 cm (vs 14), leaving the hidden
+   object under the handle bar of the drawer above; the lift jammed. Firm pull now
+   travels farther/longer so a sticky drawer ends as open as a normal one.
+2. The yawed hand spans the drawer's full width and brushes the walls on the way up.
+   A normal drawer yields a little; a sticky one (40 N friction) does not, so the brush
+   becomes a sustained load that pops the 3 N light grip. Resolution: lifting out of
+   a drawer is always the careful maneuver — the env uses the firm grip for in-drawer
+   picks without recording the robust skill (the hidden object is never the heavy
+   one, so nothing is masked). Known-location fetch now costs ~420 steps; budget
+   nominal moved 360 → 420.
+3. Objects are slid forward 5 cm before lifting out of a drawer.
+All six (drawer × sticky/normal) fetch cases now succeed. Rerun launched.
+
+**Meta-lesson for the report:** every one of today's bugs was invisible in the
+aggregate and obvious in a per-kind or per-event breakdown. The physics env has
+now taught six things the abstract sim structurally cannot (close drawers behind
+you; handles above block lifts; walls + friction make grips break; hard pulls travel
+less; heavy is slow; fixed defaults leak information).
+
 ## 2026-09-05 — Day 9c: X3 flips when elimination is expensive
 
 Follow-up to Day 9b: 10 drawers instead of 3, `put_any` tasks only, secrets = sticky
