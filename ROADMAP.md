@@ -84,7 +84,7 @@ Consolidation-with-revision is the moat. Experiment X4 is the proof.
 - [~] 4 property types (sticky, heavy, location, fast-drawer) × 3 task kinds, procedural worlds — abstract env (4 Sep); target 5–6 types incl. a fully-success-only one
 - [~] Randomized multi-property change events (`--extra-changes`), episodes-to-recovery + stale actions (4 Sep); complexity score TODO
 - [x] Ground-truth relevance + retrieval precision/recall (4 Sep)
-- [ ] Evaluation harness, baseline table, leaderboard page
+- [x] Evaluation harness (`bench/evaluate.py`: submit a memory factory) + `docs/leaderboard.md` (5 Sep)
 - [x] **X3** (abstract, 4 Sep): success-only memory = no memory (0.54); failures-only best (0.95) but cannot revise; principle: store failures to learn, contradicting successes to revise
 - [ ] Output: public repo + 4–6 page report (arXiv early 2027)
 
