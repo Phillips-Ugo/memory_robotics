@@ -24,6 +24,8 @@ COST = {
     "pick_two_hand": 9,
     "place": 5,
     "look_in": 4,  # peek into a drawer (+ close 2 if empty = 6 wasted per wrong drawer)
+    "test": 6,  # a light tug / a small lift: reveals sticky/heavy without a full failure (jam 13, drop 10)
+    #            dear enough that testing everything every episode (+12) is not viable within slack 11
     "close": 2,
     "jam": 8,  # wasted when open() jams
     "drop": 6,  # wasted when pick() drops
@@ -98,6 +100,14 @@ class SkillEnv:
             self.log.stale_actions += 1
         self.open_drawers.add(drawer)
         return self._record("pull_hard", drawer, "ok", COST["pull_hard"])
+
+    def test_drawer(self, drawer: str) -> SkillEvent:
+        """Light tug: learn whether the drawer sticks, without opening it."""
+        return self._record("test_drawer", drawer, "sticky" if self.world.props.is_sticky(drawer) else "normal", COST["test"])
+
+    def test_object(self, obj: str) -> SkillEvent:
+        """Small lift: learn whether the object is heavy, without carrying it."""
+        return self._record("test_object", obj, "heavy" if self.world.props.is_heavy(obj) else "light", COST["test"])
 
     def look_in(self, drawer: str) -> SkillEvent:
         """Peek into a drawer (opens it if needed at its open cost). found / empty."""

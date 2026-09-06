@@ -76,7 +76,7 @@ Consolidation-with-revision is the moat. Experiment X4 is the proof.
 - [x] **X2 (v0, abstract sim):** any memory beats none within 3 episodes; retrieval best while static, consolidated best after a change event (2 Sep)
 - [x] Output: `outputs/bench_v0/curves.png` — four curves + the retention-vs-revision hypothesis (research log Day 4b)
 - [x] Same experiment with robosuite skills behind the same interface (`bench/sim/`) — four curves hold in physics: none 0.49 / last-5 0.79 / retrieval 0.82 / consolidated 0.83 AUC (4 Sep; 5 worlds, needs more seeds for tight intervals)
-- [ ] LLM-planner variant so memory context can be free text
+- [x] LLM-planner variant (`bench/llm_planner.py`, Haiku reader; 4 Sep): retrieval 0.99→0.66 at the change event, consolidated best 0.95
 - **Learn:** one sim framework in depth, procedural task generation, LLM agent/tool-use
   patterns, embedding retrieval, the LLM-agent memory papers.
 

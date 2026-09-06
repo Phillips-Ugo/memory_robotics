@@ -82,7 +82,11 @@ class MemoryLayer:
         self.t = ep
         obj = log.task.obj
         for e in log.events:
-            if e.skill == "open" and e.outcome in ("ok", "jam"):
+            if e.skill == "test_drawer":
+                self._write(f"drawer:{e.target}", "sticky", str(e.outcome == "sticky"), True, ep)
+            elif e.skill == "test_object":
+                self._write(f"object:{e.target}", "heavy", str(e.outcome == "heavy"), True, ep)
+            elif e.skill == "open" and e.outcome in ("ok", "jam"):
                 self._write(f"drawer:{e.target}", "sticky", str(e.outcome == "jam"), True, ep)
                 if e.outcome == "ok":
                     self._write(f"drawer:{e.target}", "fast", str(e.steps <= 2), True, ep)

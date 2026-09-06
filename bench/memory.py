@@ -153,12 +153,12 @@ class ConsolidatedKB(Memory):
     def observe(self, log: EpisodeLog) -> None:
         self.t = log.episode_idx
         for e in log.events:
-            if e.skill == "open":
+            if e.skill == "open" or e.skill == "test_drawer":
                 f = self.drawers[e.target]
-                f.value, f.evidence, f.last_confirmed = (e.outcome == "jam"), f.evidence + 1, self.t
-            elif e.skill == "pick" and e.outcome in ("ok", "drop"):
+                f.value, f.evidence, f.last_confirmed = (e.outcome in ("jam", "sticky")), f.evidence + 1, self.t
+            elif (e.skill == "pick" and e.outcome in ("ok", "drop")) or e.skill == "test_object":
                 f = self.objects[e.target]
-                f.value, f.evidence, f.last_confirmed = (e.outcome == "drop"), f.evidence + 1, self.t
+                f.value, f.evidence, f.last_confirmed = (e.outcome in ("drop", "heavy")), f.evidence + 1, self.t
             elif e.skill == "look_in":
                 obj = log.task.obj
                 if e.outcome == "found":
@@ -218,10 +218,14 @@ def _beliefs_from_logs(logs: list[EpisodeLog]) -> Beliefs:
     b = Beliefs()
     for l in sorted(logs, key=lambda l: l.episode_idx):
         for e in l.events:
-            if e.outcome == "jam":
+            if e.outcome in ("jam", "sticky"):
                 b.sticky_drawers.add(e.target)
-            elif e.outcome == "drop":
+            elif e.outcome in ("drop", "heavy"):
                 b.heavy_objects.add(e.target)
+            elif e.skill == "test_drawer" and e.outcome == "normal":
+                b.sticky_drawers.discard(e.target)
+            elif e.skill == "test_object" and e.outcome == "light":
+                b.heavy_objects.discard(e.target)
             elif e.skill == "look_in" and e.outcome == "found":
                 b.object_in[l.task.obj] = e.target
                 b.object_not_in.setdefault(l.task.obj, set()).discard(e.target)

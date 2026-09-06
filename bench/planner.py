@@ -12,9 +12,16 @@ from .memory import Beliefs
 
 
 def _open_drawer(env: SkillEnv, beliefs: Beliefs, drawer: str) -> bool:
+    if drawer in beliefs.probe_drawers and hasattr(env, "test_drawer"):
+        # the memory wants this belief re-checked: a cheap tug, then act on the answer
+        sticky = env.test_drawer(drawer).outcome == "sticky"
+        if env.done:
+            return False
+        env.pull_hard(drawer) if sticky else env.open(drawer)
+        return not env.done
     if drawer in beliefs.sticky_drawers:
         env.pull_hard(drawer)
-    else:  # cheap first (also the probe path: re-test a possibly-stale belief)
+    else:  # cheap first
         ev = env.open(drawer)
         if ev.outcome == "jam" and not env.done:
             env.pull_hard(drawer)
@@ -22,6 +29,12 @@ def _open_drawer(env: SkillEnv, beliefs: Beliefs, drawer: str) -> bool:
 
 
 def _grab(env: SkillEnv, beliefs: Beliefs, obj: str) -> bool:
+    if obj in beliefs.probe_objects and hasattr(env, "test_object"):
+        heavy = env.test_object(obj).outcome == "heavy"
+        if env.done:
+            return False
+        env.pick_two_hand(obj) if heavy else env.pick(obj)
+        return not env.done
     if obj in beliefs.heavy_objects:
         env.pick_two_hand(obj)
     else:

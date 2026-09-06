@@ -1,5 +1,44 @@
 # Research log
 
+## 2026-09-05 — Day 9e: X4 — when is revision worth it? (probe-rate sweep)
+
+Abstract env, 30 worlds × 60 episodes × 3 seeds, three change events (ep 20 + two
+random). Consolidated memory with `probe_after` ∈ {2, 4, 8, 16, never}. Probing was
+first "try the cheap skill on a believed-sticky drawer"; then a cheap **test skill**
+was added (6 steps: a light tug / small lift that reveals the property without a full
+failure — jam 13, drop 10); then the robust skills were made expensive (stale action
++11 / +8 instead of +5 / +4).
+
+| probe_after | 2 | 4 | 8 | 16 | never | (retrieval) |
+|---|---|---|---|---|---|---|
+| AUC, original costs | 0.73 | 0.79 | 0.84 | 0.89 | **0.93** | 0.84 |
+| AUC, cheap test skill | 0.80 | 0.84 | 0.87 | 0.90 | **0.93** | 0.84 |
+| AUC, + expensive staleness | 0.80 | 0.84 | 0.88 | 0.90 | **0.93** | 0.84 |
+| stale actions (post) | 0.1 | 0.4 | 0.8 | 1.7 | 6.4 | 3.5 |
+
+**Never probing wins on success in all three settings.** The reason is structural,
+not a bug: for sticky/heavy, the robust action is *always safe* — acting on a stale
+belief costs a few steps and never fails the task — while a probe costs steps on
+every fact that aged, whether or not it changed. Expected value of probing =
+P(changed) × cost(stale) − cost(probe), and with three drawers, a change every ~15
+episodes, and stale ≈ probe cost, it is negative. A memory that never re-tests
+sticky/heavy facts is *rationally* right in this world; the sweep exposes the knob,
+it does not vindicate probing.
+
+**Where revision does pay** is where a stale belief *fails the task*: a stale
+location sends the robot to an empty drawer (wasted look, budget blown); a stale
+house rule gets the placement rejected. There the failure itself is the probe, and
+all memories revise by contradiction — no schedule needed. So the memory layer's
+revision policy should be **per fact type**: contradiction-driven for facts whose
+staleness fails tasks, schedule-driven (with the probe rate set by P(change) ×
+cost(stale) / cost(probe)) for facts whose staleness merely costs efficiency, and
+"never" when that ratio is below one.
+
+**Benchmark consequence:** to *test* revision policies, the world must contain
+facts across that spectrum and report steps and stale actions next to success —
+which it now does. A success-only leaderboard would reward never revising. Left
+as-is (costs restored) for the physics run; `bench/env.py` has the `test_*` skills.
+
 ## 2026-09-05 — Day 9d: Phase 3 physics, corrected (bugs out), and three more physics lessons
 
 Rerun after the in-drawer-test and random-default fixes (4 worlds × 24 episodes,
