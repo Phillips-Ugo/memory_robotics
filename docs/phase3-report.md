@@ -101,7 +101,15 @@ revision rule (the library prototype). LLM-summary baseline: TODO.
   (0.95) even with a success-shaped secret present, but cannot un-learn (stale 6.6).
 - **Retrieval P/R** vs ground truth: last-5 0.13/0.33, retrieval 0.16/0.50.
 - **Phase 3 world, abstract** (Day 8): per-kind — memory +24 on put, +27 on put_any,
-  +50 on fetch. **Physics** (Day 9): +17 put, +18 fetch; put_any needs recalibration.
+  +50 on fetch. **Physics, corrected** (Day 9d): none 0.43 → consolidated 0.80 AUC;
+  +41 put, +40 put_any, +29 fetch.
+- **X3 at 10 drawers** (Day 9c): failures-only memory collapses (0.26) when
+  elimination is expensive; fed-everything consolidated 0.81. Branching factor is an
+  axis of the benchmark.
+- **X4 probe-rate sweep** (Day 9e): never re-testing wins on success (0.93) in all
+  settings tried — for facts whose staleness only costs steps, probing has negative
+  expected value; where staleness fails the task (location, rule) revision happens
+  by contradiction. Revision policy must be per fact type.
 
 ## 5. Findings (the sentences the paper is for)
 
@@ -116,9 +124,16 @@ revision rule (the library prototype). LLM-summary baseline: TODO.
    the successes that contradict them to revise.
 5. Consolidated facts are the representation a language model uses best, at 4% of
    raw retrieval's storage.
-6. Methodological: the episode log is the memory's training data — a budget timeout
-   must never look like an observation; and an LLM harness must reproduce the
-   no-memory row before any LLM-vs-memory claim.
+6. Revision is worth it only when P(change) × cost(stale) > cost(probe). For facts
+   whose staleness fails the task, the failure is the probe; for the rest, a
+   schedule — or never. A success-only leaderboard rewards never revising, which is
+   why the benchmark reports steps and stale actions alongside success.
+7. Failure memory is best only while elimination is cheap: at 10 options a single
+   confirming success outweighs any number of eliminations.
+8. Methodological: the episode log is the memory's training data — a budget timeout
+   must never look like an observation; an LLM harness must reproduce the
+   no-memory row before any LLM-vs-memory claim; and every bug this week was
+   invisible in the aggregate and obvious per task kind.
 
 ## 6. Limitations / honest caveats
 
