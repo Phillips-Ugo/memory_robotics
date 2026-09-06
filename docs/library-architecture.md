@@ -86,11 +86,14 @@ task planners, skill libraries, teleop annotations).
 
 ## Milestones
 
-- **L0** (now): `bench/memory.ConsolidatedKB` — dict of facts, probe rule, ~60 lines.
-- **L1**: same logic on SQLite, `MemoryLayer` class, explain(), text renderer; passes
-  the benchmark identically to L0 (regression test).
-- **L2**: revision policy module (decay, contradictions, change detection) — X4 sweep.
-- **L3**: entity extraction from free-text task strings; embedding fallback.
+- **L0** ✓: `bench/memory.ConsolidatedKB` — dict of facts, probe rule, ~60 lines.
+- **L1** ✓ (5 Sep): same logic on SQLite, `MemoryLayer` class, explain(), text renderer;
+  passes the benchmark identically to L0 (AUC 0.865 both, `bench/evaluate.py`).
+- **L2** ✓ (5 Sep): `RevisionPolicy` — per fact type: schedule / contradiction / never;
+  confidence = f(evidence, age, contradictions). X4: never-probe is optimal for
+  sticky/heavy in the current world (see log Day 9e); change-detection TODO.
+- **L3** ◐ (5 Sep): entity extraction from free-text tasks (`memlayer/entities.py`,
+  vocabulary = what the memory has seen); embedding fallback TODO.
 - **L4**: episode-understanding adapter for one VLA log format (RoboMemArena's
   keyframe annotations as the first target).
 - **v0.1 release**: L1–L3 + benchmark adapter + docs.
