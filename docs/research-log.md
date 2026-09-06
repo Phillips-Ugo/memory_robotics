@@ -1,5 +1,28 @@
 # Research log
 
+## 2026-09-05 — Day 9h: interference reproduces once the world is large
+
+Large-entity world: 10 drawers × 12 objects, put tasks, sticky + heavy secrets,
+20 worlds × 80 episodes × 2 seeds. Success on secret-touching tasks:
+
+| interference (1 − p_touch) | last-5 | retrieval | consolidated |
+|---|---|---|---|
+| 0.1 | 0.77 | 0.82 | 0.89 |
+| 0.5 | 0.66 | 0.80 | 0.86 |
+| 0.8 | **0.49** | 0.75 | 0.76 |
+
+Now the RoboMME-Interference pattern appears: the window memory (last-5) loses 28
+points as unrelated tasks fill its window, keyed retrieval loses 7, consolidated 13
+(at 0.8 both keyed memories are evidence-starved — a secret is touched every ~5
+episodes across 22 entities — not clutter-limited). In the small world (Day 9g) all
+three were flat. So interference is a real axis, but it only bites when the
+entity count is large relative to the memory's horizon; the benchmark should
+expose entity count as a first-class parameter (`run_sequence(..., drawers=,
+objects=)` does).
+
+Leaderboard refreshed with the TF-IDF baseline: 0.74 (fetch 0.67 — similarity
+retrieval is worst exactly where the relevant episode is a *different task kind*).
+
 ## 2026-09-05 — Day 9g: similarity retrieval loses to entity keys; interference does not touch keyed memories
 
 **TF-IDF retrieval baseline** (`retrieval-tfidf`: cosine over the full log text of
