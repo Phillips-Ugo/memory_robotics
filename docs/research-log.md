@@ -1,5 +1,36 @@
 # Research log
 
+## 2026-09-05 — Day 9g: similarity retrieval loses to entity keys; interference does not touch keyed memories
+
+**TF-IDF retrieval baseline** (`retrieval-tfidf`: cosine over the full log text of
+every stored episode, recency as tie-break — the closest cheap stand-in for
+embedding retrieval): AUC 0.77 vs 0.86 for entity-keyed retrieval (token overlap on
+the *task* text), and it collapses harder at the change event (post 0.68 vs 0.84).
+Similarity over event-rich logs surfaces episodes that *look like* the query rather
+than ones *about the same drawer*, and long old logs dominate. RoboMME-Interference's
+own caveat ("the fix depends on the query resembling its demonstration") shows up
+here as a 9-point gap. Entity keys first, similarity as fallback — as the
+architecture doc says.
+
+**Interference axis** (`--p-touch`; 1 − p_touch = share of tasks that touch no
+secret). Success on secret-touching tasks only, 30 × 50 × 3:
+
+| interference | last-5 | retrieval | retrieval-tfidf | consolidated |
+|---|---|---|---|---|
+| 0.1 | 0.75 | 0.85 | 0.75 | 0.87 |
+| 0.3 | 0.76 | 0.85 | 0.75 | 0.87 |
+| 0.5 | 0.76 | 0.84 | 0.74 | 0.86 |
+| 0.7 | 0.77 | 0.85 | 0.75 | 0.86 |
+
+Flat. Where RoboMME-Interference's in-context memories fell 45 → 19 as unrelated
+sessions piled up, keyed and consolidated memories are immune by construction, and
+even last-5 holds because with three drawers and four objects the relevant entity
+recurs within its window. To reproduce their decay one needs a window shorter than
+the gap between relevant episodes — a large-entity world, which is the 10-drawer
+variant's cousin and another axis worth exposing. The two benchmarks measure
+different things: theirs, whether a memory survives clutter; ours, whether it
+survives change.
+
 ## 2026-09-05 — Day 9f: Phase 3 physics, clean (5 worlds × 24 episodes, 480 episodes)
 
 After the fetch fixes (Day 9d): `docs/figures/bench_sim_p3c_*`.
