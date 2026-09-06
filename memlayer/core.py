@@ -145,7 +145,19 @@ class MemoryLayer:
     def confidence(self, f: Fact) -> float:
         return self.policy.confidence(f.evidence, self.t - f.last_confirmed, int(f.last_contradicted > f.last_confirmed))
 
+    def known_entities(self) -> tuple[list[str], list[str]]:
+        objs = sorted({f.entity.split(":", 1)[1] for f in self.facts() if f.entity.startswith("object:")}
+                      | set(self.db.execute("SELECT DISTINCT obj FROM episodes").fetchall() and
+                            [r[0] for r in self.db.execute("SELECT DISTINCT obj FROM episodes")]))
+        drs = sorted({f.entity.split(":", 1)[1] for f in self.facts() if f.entity.startswith("drawer:")}
+                     | {r[0] for r in self.db.execute("SELECT DISTINCT drawer FROM episodes") if r[0] not in ("any", "table", None)})
+        return objs, drs
+
     def recall(self, task, initial_obs: dict | None = None) -> Beliefs:
+        if isinstance(task, str):  # free text: extract entities from what this memory knows
+            from .entities import extract
+            objs, drs = self.known_entities()
+            task = extract(task, objs, drs)
         b = Beliefs()
         for f in self.facts():
             kind, _, name = f.entity.partition(":")
@@ -173,6 +185,10 @@ class MemoryLayer:
         return b
 
     def recall_text(self, task, initial_obs: dict | None = None) -> str:
+        if isinstance(task, str):
+            from .entities import extract
+            objs, drs = self.known_entities()
+            task = extract(task, objs, drs)
         lines = []
         for f in self.facts():
             kind, _, name = f.entity.partition(":")
