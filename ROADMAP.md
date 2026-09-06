@@ -89,10 +89,10 @@ Consolidation-with-revision is the moat. Experiment X4 is the proof.
 - [ ] Output: public repo + 4–6 page report (arXiv early 2027)
 
 ### Phase 4 — The memory layer itself (weeks 19–24)
-- [ ] Experience store → consolidation into structured facts (evidence, confidence, freshness)
+- [~] Experience store → consolidated facts: `memlayer/` L1 on SQLite passes the benchmark identically to the prototype (5 Sep); confidence/decay = L2
 - [ ] Retrieval keyed on task/object/place/failure; revision rule for contradictions
 - [ ] **X4:** recovery speed after change events vs all baselines — *the* differentiating result
-- [ ] API: `memory.observe(episode)` / `memory.recall(task, observation)`
+- [x] API: `MemoryLayer.observe / recall / recall_text / explain` (5 Sep)
 - [ ] Plug into a VLA on RoboMemArena-style tasks if time permits
 - [ ] Output: library v0.1 + results table + paper draft for a 2027 venue (CoRL 2027,
   or RSS/ICRA 2027 workshops)
