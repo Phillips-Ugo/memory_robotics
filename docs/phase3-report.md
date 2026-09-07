@@ -102,8 +102,10 @@ revision rule (the library prototype). LLM-summary baseline: TODO.
 - **Retrieval P/R** vs ground truth: last-5 0.13/0.33, retrieval 0.16/0.50.
 - **Phase 3 world, abstract** (Day 8): per-kind — memory +24 on put, +27 on put_any,
   +50 on fetch. **Physics, clean** (Day 9f, 480 eps): none 0.42 → consolidated
-  0.85 AUC; put 0.44 → 0.86, put_any 0.48 → 0.86, fetch 0.30 → 0.82; consolidated
-  best after the change (0.82) with half retrieval's stale actions.
+  0.85 AUC. **At scale** (Day 10, 2,400 eps): none 0.47 [0.39, 0.52] → last-5 0.83,
+  retrieval 0.86, consolidated 0.86; fetch 0.33 → 0.87. Retrieval vs consolidated
+  is not separated on success in physics with the scripted planner; the revision
+  effect is visible only with the LLM reader.
 - **X3 at 10 drawers** (Day 9c): failures-only memory collapses (0.26) when
   elimination is expensive; fed-everything consolidated 0.81. Branching factor is an
   axis of the benchmark.

@@ -1,5 +1,33 @@
 # Research log
 
+## 2026-09-06 — Day 10: Phase 3 physics at scale (2,400 episodes) — the intervals
+
+10 worlds × 2 seeds × 30 episodes per memory; change at 15 (random property type);
+budgets per task kind. Figure `docs/figures/bench_sim_p3big_curves_2026-09-06.png`.
+
+| memory | AUC | pre (ep 5–14) [CI] | post (15–29) [CI] | stale/ep | put | put_any | fetch | wasted looks/fetch |
+|---|---|---|---|---|---|---|---|---|
+| none | 0.47 | 0.46 [0.39, 0.52] | 0.45 [0.39, 0.50] | 0.00 | 0.44 | 0.62 | 0.33 | 0.82 |
+| last-5 | 0.83 | 0.86 [0.81, 0.90] | 0.82 [0.78, 0.86] | 0.03 | 0.79 | 0.89 | 0.81 | 0.21 |
+| retrieval | 0.86 | 0.87 [0.82, 0.91] | 0.87 [0.83, 0.91] | 0.06 | 0.87 | 0.84 | 0.86 | 0.13 |
+| consolidated | **0.86** | **0.90** [0.85, 0.93] | 0.87 [0.83, 0.90] | 0.09 | 0.82 | 0.90 | 0.87 | 0.13 |
+
+**Solid:** memory vs none = +39 points, every interval clear; fetch 0.33 → 0.87;
+wasted looks 0.82 → 0.13. **Not separated:** retrieval vs consolidated on success,
+before or after the change — identical AUC (0.857 vs 0.865), overlapping intervals,
+and in physics the change event does not visibly hurt retrieval (0.87 → 0.87).
+Consolidated even takes slightly *more* stale actions here (0.09 vs 0.06/episode):
+its probes on unchanged facts cost more than retrieval's staleness saves — the Day 9e
+economics, confirmed in physics. The sharp revision result remains the LLM-reader
+run (Day 7b: 0.99 → 0.66); with a scripted planner that recovers in-episode and a
+budget that tolerates a stale action, success cannot see it.
+
+**What this means for the report:** claim (1) memory is worth ~40 points in physics,
+(2) consolidated facts are the best representation *for a language-model reader* and
+~4% of retrieval's storage, (3) revision is an economics question the benchmark
+now exposes — not "consolidated beats retrieval" in physics with a scripted planner.
+That is the honest sentence, and it is still a good one.
+
 ## 2026-09-05 — Day 9h: interference reproduces once the world is large
 
 Large-entity world: 10 drawers × 12 objects, put tasks, sticky + heavy secrets,
