@@ -61,8 +61,10 @@ def main() -> None:
             "state": {"dtype": "float32", "shape": (8,), "names": ["state"]},
             "actions": {"dtype": "float32", "shape": (7,), "names": ["actions"]},
         },
-        image_writer_threads=10,
-        image_writer_processes=5,
+        # threads only: with writer *processes*, save_episode() can read frames back for
+        # stats before the process queue has flushed them -> FileNotFoundError at ep ~20
+        image_writer_threads=16,
+        image_writer_processes=0,
     )
 
     n_ep = n_frames = 0
