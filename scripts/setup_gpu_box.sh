@@ -22,10 +22,16 @@ export PATH="$HOME/.local/bin:$PATH"
 # openpi caches the checkpoint (several GB) under ~/.cache by default — on RunPod that is
 # the small container disk. Keep it on the /workspace volume, for this shell and future ones.
 export OPENPI_DATA_HOME=/workspace/openpi_cache
-grep -q OPENPI_DATA_HOME ~/.bashrc 2>/dev/null || cat >> ~/.bashrc <<'RC'
+# NOTE: RunPod's ~/.bashrc returns early for non-interactive shells, so scripts must
+# not rely on it — source /workspace/env.sh instead (written here, on the volume).
+cat > /workspace/env.sh <<'RC'
 export PATH="$HOME/.local/bin:$PATH"
 export OPENPI_DATA_HOME=/workspace/openpi_cache
+export HF_LEROBOT_HOME=/workspace/lerobot_cache
+export HF_HUB_DISABLE_XET=1
 RC
+grep -q "workspace/env.sh" ~/.bashrc 2>/dev/null || echo '. /workspace/env.sh' >> ~/.bashrc
+. /workspace/env.sh
 
 # ---- A) openpi server env (official repo; serves pi05_libero) --------------
 [ -d vendor/openpi ] || git clone https://github.com/Physical-Intelligence/openpi vendor/openpi
@@ -48,7 +54,7 @@ cat <<EOF
 
 Done. M2 runbook (use tmux so nothing dies with your ssh session):
 
-  # (new shells: source ~/.bashrc first so uv and OPENPI_DATA_HOME are set)
+  # (new shells and scripts: `. /workspace/env.sh` first — PATH, caches on the volume)
   # step 0 — verified checkpoint download (openpi's own downloader corrupts on restart):
   cd $REPO_ROOT/vendor/openpi && uv run python $REPO_ROOT/scripts/download_pi05.py
 
