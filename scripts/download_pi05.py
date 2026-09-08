@@ -37,10 +37,14 @@ print(f"{len(files)} files, {total/2**30:.2f} GiB -> {dest}", flush=True)
 
 def fetch(remote: str, tmp: Path) -> None:
     url = "https://storage.googleapis.com/" + urllib.parse.quote(remote)
+    # no resume (-C -): some hosts' network paths ignore Range on a retry and the
+    # retried full response gets appended -> oversize file. A fresh download per
+    # attempt is cheap at datacenter speeds; the size check below is the verifier.
+    if tmp.exists():
+        tmp.unlink()
     cmd = [
         "curl", "-sS", "-L", "--fail",
-        "-C", "-",                      # resume from whatever tmp already has
-        "--retry", "10", "--retry-all-errors", "--retry-delay", "3",
+        "--retry", "0",
         "--speed-limit", "100000", "--speed-time", "30",  # abort if <100 KB/s for 30 s
         "-o", str(tmp), url,
     ]
@@ -58,8 +62,6 @@ for i, (remote, size) in enumerate(sorted(infos.items(), key=lambda kv: kv[1]), 
     for attempt in range(1, 8):
         try:
             t0 = time.time()
-            if tmp.exists() and tmp.stat().st_size > size:
-                tmp.unlink()  # over-long tmp can't be resumed; start clean
             fetch(remote, tmp)
             got = tmp.stat().st_size
             if got != size:
