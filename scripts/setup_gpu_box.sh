@@ -28,6 +28,7 @@ cat > /workspace/env.sh <<'RC'
 export PATH="$HOME/.local/bin:$PATH"
 export OPENPI_DATA_HOME=/workspace/openpi_cache
 export HF_LEROBOT_HOME=/workspace/lerobot_cache
+export HF_HOME=/workspace/hf_home          # datasets' Arrow cache is tens of GB: keep off the container disk
 export HF_HUB_DISABLE_XET=1
 RC
 grep -q "workspace/env.sh" ~/.bashrc 2>/dev/null || echo '. /workspace/env.sh' >> ~/.bashrc
