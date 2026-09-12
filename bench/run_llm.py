@@ -37,7 +37,7 @@ def run_sequence(memory, backend, world_id: int, seed: int, episodes: int, chang
                                       "props": [world.props.sticky_drawer, world.props.heavy_object],
                                       "context": context, "trace": stats.trace, "events": [e.__dict__ for e in env.log.events],
                                       "success": env.log.success, "steps": env.log.steps}) + "\n")
-        rows.append({"ep": ep, "success": int(env.log.success), "steps": env.log.steps,
+        rows.append({"ep": ep, "success": int(env.log.success), "steps": env.log.steps, "kind": task.kind,
                      "stale": env.log.stale_actions, "calls": stats.calls, "ctx_chars": len(context)})
     return {"rows": rows, "bytes": memory.bytes_stored()}
 

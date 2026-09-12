@@ -25,9 +25,19 @@ from .world import Task
 SKILLS = {
     "open": "open(drawer): gentle pull. Fails (jam) if the drawer sticks.",
     "pull_hard": "pull_hard(drawer): strong pull, ~2x the cost of open. Opens sticky drawers.",
+    "look_in": "look_in(drawer): open it if needed and check whether the object is inside -> found / empty.",
+    "close": "close(drawer): close an open drawer (cheap).",
+    "test_drawer": "test_drawer(drawer): a light tug that reveals whether it sticks (cheaper than a failed open).",
+    "test_object": "test_object(object): a small lift that reveals whether it is heavy (cheaper than a drop).",
     "pick": "pick(object): light grip. Fails (drop) if the object is heavy.",
     "pick_two_hand": "pick_two_hand(object): firm grip, ~2x the cost of pick. Holds heavy objects.",
-    "place": "place(object, drawer): put the held object into the open drawer. Ends the task.",
+    "place": "place(object, drawer or 'table'): put the held object into the open drawer, or on the table. Ends the task.",
+}
+TASK_HINTS = {
+    "put": "Put the object into the named drawer.",
+    "put_any": "Put the object away in ANY drawer of your choice — but this house may have a rule about which drawer "
+               "things belong in (a wrong choice is rejected).",
+    "fetch": "The object is inside one of the drawers; find it (look_in), pick it, and place it on the table.",
 }
 
 
@@ -55,6 +65,24 @@ def recall_text(memory: Memory, task: Task) -> str:
                 age = memory.t - f.last_confirmed
                 lines.append(f"The {o} {'is heavy' if f.value else 'is light'} "
                              f"(evidence: {f.evidence} observation(s), last confirmed {age} episode(s) ago).")
+        for d, f in getattr(memory, "fast", {}).items():
+            if f.evidence and f.value:
+                lines.append(f"The {d} drawer opens quickly (evidence: {f.evidence} observation(s), "
+                             f"last confirmed {memory.t - f.last_confirmed} episode(s) ago).")
+        for o, (d, t) in getattr(memory, "where", {}).items():
+            lines.append(f"The {o} was last found in the {d} drawer (last confirmed {memory.t - t} episode(s) ago).")
+        for o, empties in getattr(memory, "not_in", {}).items():
+            found_t = memory.where.get(o, (None, -1))[1]
+            recent = [d for d, t in empties.items() if t > found_t]
+            if recent:
+                lines.append(f"The {o} was NOT in the {', '.join(sorted(recent))} drawer(s) when last checked.")
+        if getattr(memory, "preferred", None):
+            d, t = memory.preferred
+            lines.append(f"Things put away belong in the {d} drawer (last confirmed {memory.t - t} episode(s) ago).")
+        pref_t = memory.preferred[1] if getattr(memory, "preferred", None) else -1
+        rej = [d for d, t in getattr(memory, "rejected", {}).items() if t > pref_t]
+        if rej:
+            lines.append(f"Putting things in the {', '.join(sorted(rej))} drawer(s) was rejected.")
         return "\n".join(lines)
     raise TypeError(type(memory))
 
@@ -73,7 +101,9 @@ def build_prompt(task: Task, context: str, history: list[str]) -> str:
     skills = "\n".join(f"- {v}" for v in SKILLS.values())
     ctx = context.strip() or "(no memory)"
     hist = "\n".join(history) or "(none yet)"
-    return (f"Task: {task.text}\nObject: {task.obj}. Drawer: {task.drawer}.\n\nSkills:\n{skills}\n\n"
+    kind = getattr(task, "kind", "put")
+    return (f"Task: {task.text}\n{TASK_HINTS.get(kind, '')}\nObject: {task.obj}. Drawer: {task.drawer}.\n"
+            f"Drawers in this kitchen: left, middle, right.\n\nSkills:\n{skills}\n\n"
             f"Memory context:\n{ctx}\n\nWhat happened so far in THIS episode:\n{hist}\n\n"
             "Plan the remaining steps.")
 
@@ -93,24 +123,83 @@ class MockBackend:
 
     def plan(self, task: Task, context: str, history: list[str]) -> list[dict]:
         sticky = heavy = False
+        stale_sticky = stale_heavy = False
         for line in context.splitlines():
-            if task.drawer in line and ("jam" in line or "sticks" in line) and self._fresh(line):
-                sticky = True
-            if task.obj in line and ("drop" in line or "is heavy" in line) and self._fresh(line):
-                heavy = True
+            if task.drawer in line and ("jam" in line or "sticks" in line):
+                if self._fresh(line):
+                    sticky = True
+                else:
+                    stale_sticky = True
+            if task.obj in line and ("drop" in line or "is heavy" in line):
+                if self._fresh(line):
+                    heavy = True
+                else:
+                    stale_heavy = True
         done = " ".join(history)
+        kind = getattr(task, "kind", "put")
+        drawers = ["left", "middle", "right"]
         steps = []
+        # a stale belief is re-checked with the cheap test skill, once, before acting on it
+        if kind == "put" and stale_sticky and not sticky and "test_drawer" not in done and "drawer open" not in done:
+            return [{"skill": "test_drawer", "target": task.drawer}]
+        if stale_heavy and not heavy and "test_object" not in done and "holding" not in done and (kind != "fetch" or "found" in done):
+            return [{"skill": "test_object", "target": task.obj}]
+        if f"test_drawer({task.drawer}) -> sticky" in done:
+            sticky = True
+        if f"test_object({task.obj}) -> heavy" in done:
+            heavy = True
+        if kind == "fetch":
+            if "found" not in done:
+                seen_empty = [d for d in drawers if f"look_in({d}) -> empty" in done]
+                for line in context.splitlines():
+                    if task.obj in line and "was NOT in the" in line:
+                        seen_empty += [d for d in drawers if d in line.split("was NOT in the")[1]]
+                loc = None
+                for line in context.splitlines():
+                    if task.obj in line and "found in the" in line:
+                        loc = line.split("found in the ")[1].split()[0]
+                    m2 = re.search(r"look_in\((\w+)\)->found", line) if task.obj in line else None
+                    if m2:
+                        loc = m2.group(1)
+                cands = ([loc] if loc and loc not in seen_empty else []) + [d for d in drawers if d not in seen_empty and d != loc]
+                if not cands:
+                    return []
+                steps.append({"skill": "look_in", "target": cands[0]})
+                return steps
+            if "holding" not in done:
+                steps.append({"skill": "pick_two_hand" if ("drop" in done or heavy) else "pick", "target": task.obj})
+            steps.append({"skill": "place", "target": "table"})
+            return steps
+        if kind == "put_any":
+            pref = None
+            for line in context.splitlines():
+                if "belong in the" in line:
+                    pref = line.split("belong in the ")[1].split()[0]
+                m2 = re.search(r"place\((\w+)\)->praised", line)
+                if m2:
+                    pref = m2.group(1)
+            rejected = set(re.findall(r"place\((\w+)\)->rejected", context)) | set(re.findall(r"place\((\w+)\) -> rejected", done))
+            for line in context.splitlines():
+                if "was rejected" in line:
+                    rejected |= {d for d in drawers if d in line.split("Putting things in the")[1]}
+            fast_ds = set(re.findall(r"open\((\w+)\)->ok\[2\]", context)) | {l.split()[1] for l in context.splitlines() if "opens quickly" in l}
+            sticky_ds = set(re.findall(r"open\((\w+)\)->jam", context)) | {l.split()[1] for l in context.splitlines() if "drawer sticks" in l}
+            ok_ds = [d for d in drawers if d not in rejected and d not in sticky_ds]
+            choice = pref if pref and pref not in rejected else next((d for d in ok_ds if d in fast_ds), ok_ds[0] if ok_ds else drawers[0])
+            target_drawer = choice
+        else:
+            target_drawer = task.drawer
         if "drawer open" not in done:
-            if "jam" in done or sticky:
-                steps.append({"skill": "pull_hard", "target": task.drawer})
+            if "jam" in done or (sticky and kind == "put"):
+                steps.append({"skill": "pull_hard", "target": target_drawer})
             else:
-                steps.append({"skill": "open", "target": task.drawer})
+                steps.append({"skill": "open", "target": target_drawer})
         if "holding" not in done:
             if "drop" in done or heavy:
                 steps.append({"skill": "pick_two_hand", "target": task.obj})
             else:
                 steps.append({"skill": "pick", "target": task.obj})
-        steps.append({"skill": "place", "target": task.drawer})
+        steps.append({"skill": "place", "target": target_drawer})
         return steps
 
 
@@ -162,14 +251,16 @@ def normalize_step(step: dict, task: Task, drawers, objects) -> tuple[str, str]:
     "the butter", or put the drawer in a separate key — none of that should fail an episode."""
     skill = step["skill"]
     raw = " ".join(str(step.get(k, "")) for k in ("target", "drawer", "object")).lower()
-    if skill in ("open", "pull_hard", "place"):
-        cands = drawers
-    else:
-        cands = objects
+    if skill == "place" and (getattr(task, "kind", "put") == "fetch" or "table" in raw):
+        return skill, "table"
+    drawer_skills = ("open", "pull_hard", "place", "look_in", "close", "test_drawer")
+    cands = drawers if skill in drawer_skills else objects
     hit = [c for c in cands if c.lower().replace("_", " ") in raw.replace("_", " ")]
     if hit:
         return skill, hit[0]
-    return skill, (task.drawer if skill in ("open", "pull_hard", "place") else task.obj)
+    if skill in drawer_skills:
+        return skill, (task.drawer if task.drawer in drawers else drawers[0])
+    return skill, task.obj
 
 
 def make_backend(name: str):
@@ -183,7 +274,7 @@ class LLMRunStats:
     trace: list = None
 
 
-def run_llm_planner(env, task: Task, context: str, backend, max_calls: int = 4, trace: bool = False) -> LLMRunStats:
+def run_llm_planner(env, task: Task, context: str, backend, max_calls: int = 6, trace: bool = False) -> LLMRunStats:
     """Execute backend plans against a SkillEnv/SimSkillEnv, replanning after any
     failed skill (jam/drop) with the failure appended to the in-episode history."""
     history: list[str] = []
@@ -215,9 +306,13 @@ def run_llm_planner(env, task: Task, context: str, backend, max_calls: int = 4, 
             if ev.outcome == "ok" and ev.skill in ("pick", "pick_two_hand", "pick_firm"):
                 holding = True
                 history[-1] += " (holding object)"
-            if ev.outcome not in ("ok",):
-                failed = True
+            if ev.skill == "look_in" and ev.outcome == "found":
+                history[-1] += " (drawer open, object visible)"
+            if ev.outcome not in ("ok", "found", "praised"):
+                failed = True  # jam / drop / empty / rejected / test results: replan with the new information
                 break
-        if not failed:
+        if not failed and env.done:
             break
+        # plan executed without failure but the task is not finished (e.g. a fetch plan
+        # that only looked): replan with the updated history
     return stats
