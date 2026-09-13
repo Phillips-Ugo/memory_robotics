@@ -35,13 +35,13 @@ grep -q "workspace/env.sh" ~/.bashrc 2>/dev/null || echo '. /workspace/env.sh' >
 . /workspace/env.sh
 
 # ---- A) openpi server env (official repo; serves pi05_libero) --------------
-[ -d vendor/openpi ] || git clone https://github.com/Physical-Intelligence/openpi vendor/openpi
+[ -d vendor/openpi/.git ] || git clone https://github.com/Physical-Intelligence/openpi vendor/openpi
 (cd vendor/openpi && GIT_LFS_SKIP_SMUDGE=1 uv sync)
 
 # ---- B) RoboMemArena harness env (same recipe as setup_rma_env.sh, Linux) --
 [ -d vendor/RoboMemArena ] || git clone --depth 1 https://github.com/OpenHelix-Team/RoboMemArena vendor/RoboMemArena
 
-uv venv vendor/rma-venv --python 3.11
+uv venv --allow-existing vendor/rma-venv --python 3.11
 # mujoco MUST be 2.3.7: robosuite 1.4.x breaks on mujoco 3.x joint indexing
 uv pip install --python vendor/rma-venv/bin/python \
     robosuite==1.4.1 mujoco==2.3.7 bddl easydict "gym==0.26.2" future termcolor \
