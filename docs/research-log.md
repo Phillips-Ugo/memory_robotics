@@ -1,5 +1,34 @@
 # Research log
 
+## 2026-09-11 — Day 11: Haiku reads the Phase 3 world (5 property types, 3 task kinds)
+
+`bench/run_llm.py --backend anthropic`, 10 worlds × 50 episodes, change at 25;
+4,210 calls, 3.4M tokens (~$4). Memories render to text; consolidated now renders
+all fact types (location, fast drawer, house rule, exclusions) — it had only ever
+rendered sticky/heavy before, so every earlier text reader was blind to three of
+five property types. Planner vocabulary gained look_in/close/test skills and
+task-kind hints; the executor replans until the task actually ends.
+
+| memory | AUC | pre [CI] | post-change (10) | stale (post) | ctx chars/ep |
+|---|---|---|---|---|---|
+| none | 0.25 | 0.22 [0.15, 0.31] | 0.26 | 0.0 | 0 |
+| last-5 | 0.73 | 0.80 [0.71, 0.87] | 0.70 | 1.5 | 729 |
+| retrieval | 0.80 | **0.96** [0.90, 0.98] | 0.73 | 1.7 | 717 |
+| retrieval-tfidf | 0.81 | 0.98 [0.93, 0.99] | 0.72 | 1.3 | 713 |
+| consolidated | **0.82** | 0.88 [0.80, 0.93] | **0.77** | **0.2** | 903 |
+
+**Same shape as the v0 world (Day 7b):** raw retrieval is near-perfect while the
+world is static (0.96–0.98) and loses ~25 points at the change; consolidated is
+lower before, highest after, with a tenth of the stale actions, and best overall.
+With a language model reading, the revision effect is visible on *success*, which
+it never was with the scripted planner (Day 10) — the model trusts old logs.
+
+**Caveat:** the no-memory row (0.25) is below the scripted planner's 0.34 — the
+model's uninformed choices are worse than random on free-choice tasks and its
+searches less systematic — so part of every memory's gain here is "memory rescues
+a weaker planner." The mock reader matched (0.35), so the harness is sound; the
+gap is model behaviour, and it should be reported next to the numbers.
+
 ## 2026-09-06 — Day 10: Phase 3 physics at scale (2,400 episodes) — the intervals
 
 10 worlds × 2 seeds × 30 episodes per memory; change at 15 (random property type);
