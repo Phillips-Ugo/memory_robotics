@@ -94,6 +94,14 @@ task planners, skill libraries, teleop annotations).
   sticky/heavy in the current world (see log Day 9e); change-detection TODO.
 - **L3** ◐ (5 Sep): entity extraction from free-text tasks (`memlayer/entities.py`,
   vocabulary = what the memory has seen); embedding fallback TODO.
-- **L4**: episode-understanding adapter for one VLA log format (RoboMemArena's
-  keyframe annotations as the first target).
+- **L4** ◐ (14 Sep): structured-log ingestion — `memlayer/ingest.py` turns *stage
+  logs* (named sub-goals, pass/fail, step timing) into facts: `trouble:<verb>` on an
+  entity when its windowed failure rate crosses a threshold (deployment quirks are
+  rates, not streaks; the window swinging back is the contradiction that flips it),
+  `slow:`/`easy:` from per-(verb, entity) cost baselines. First adapter:
+  `memlayer/adapters/robomemarena.py` (harness `results.json`; stage names parsed
+  as <verb>_<object>_<place>). Tested on a synthetic 51-episode task-1 log with a
+  quirk that disappears at episode 30: fact learned by ep 5, flipped at ep 36.
+  Known ambiguity: every entity in a failing stage gets blamed (object *and* basket)
+  until another task disambiguates. Video/keyframe understanding is still TODO.
 - **v0.1 release**: L1–L3 + benchmark adapter + docs.

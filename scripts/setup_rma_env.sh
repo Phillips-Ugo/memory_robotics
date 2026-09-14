@@ -16,6 +16,9 @@ uv pip install --python vendor/rma-venv/bin/python \
 sed -i '' "s|'/System/Library/OpenGL.framework/OpenGL'|'/System/Library/Frameworks/OpenGL.framework/OpenGL'|" \
     vendor/rma-venv/lib/python3.11/site-packages/mujoco/cgl/cgl.py
 
+# record per-stage completion steps + results.json (memlayer ingests these)
+python3 scripts/patch_rma_stage_timing.py || true
+
 # LIBERO asks about a dataset folder on first import; accept defaults non-interactively
 printf 'N\n' | vendor/rma-venv/bin/python -c "import sys; sys.path.insert(0, 'vendor/RoboMemArena/evaluation_benchmark/libero_fork'); import libero" || true
 

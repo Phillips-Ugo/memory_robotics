@@ -48,6 +48,9 @@ uv pip install --python vendor/rma-venv/bin/python \
     pyyaml opencv-python "imageio[ffmpeg]" tqdm torch numpy matplotlib \
     websockets msgpack typing_extensions  # last three: openpi-client deps for the pi05 adapter
 
+# record per-stage completion steps + results.json (memlayer ingests these)
+python3 scripts/patch_rma_stage_timing.py || true
+
 # LIBERO asks about a dataset folder on first import; accept defaults non-interactively
 printf 'N\n' | vendor/rma-venv/bin/python -c "import sys; sys.path.insert(0, 'vendor/RoboMemArena/evaluation_benchmark/libero_fork'); import libero" || true
 
