@@ -17,5 +17,5 @@ uv run python /workspace/memory_robotics/scripts/download_rma_data.py --tasks 1 
 uv run python /workspace/memory_robotics/scripts/convert_rma_to_lerobot.py --data-root /workspace/rma_data --repo-id belu/rma_task1
 (cd /workspace/memory_robotics && python3 scripts/patch_openpi_config.py --repo-id belu/rma_task1)
 uv run scripts/compute_norm_stats.py --config-name pi05_rma_lora
-XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 uv run scripts/train.py pi05_rma_lora --exp-name smoke --overwrite --num-train-steps 20
+XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 uv run scripts/train.py pi05_rma_lora --exp-name smoke --overwrite --num-train-steps 20 --no-wandb-enabled
 echo "[M2B PIPELINE OK THROUGH SMOKE TRAIN]"

@@ -83,8 +83,8 @@ M2b runbook — LoRA fine-tune on task 1 (needs >=40 GB VRAM, >=120 GB volume; s
   (cd $REPO_ROOT && python3 scripts/patch_openpi_config.py --repo-id belu/rma_task1)
   uv run scripts/compute_norm_stats.py --config-name pi05_rma_lora
   # smoke: 20 steps, then the real run in the background
-  XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 uv run scripts/train.py pi05_rma_lora --exp-name smoke --overwrite --num-train-steps 20
-  XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 nohup uv run scripts/train.py pi05_rma_lora --exp-name t1 --overwrite > $REPO_ROOT/train_t1.log 2>&1 &
+  XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 uv run scripts/train.py pi05_rma_lora --exp-name smoke --overwrite --num-train-steps 20 --no-wandb-enabled
+  XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 nohup uv run scripts/train.py pi05_rma_lora --exp-name t1 --overwrite --no-wandb-enabled > $REPO_ROOT/train_t1.log 2>&1 &
   # then serve the fine-tuned checkpoint instead of --env LIBERO:
   uv run scripts/serve_policy.py policy:checkpoint --policy.config=pi05_rma_lora --policy.dir=checkpoints/pi05_rma_lora/t1/8000
 
