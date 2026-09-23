@@ -39,9 +39,8 @@ try:
 except ImportError:  # importing outside the harness (tests)
     BasePolicyAdapter = object
 
-from memlayer.adapters.robomemarena import ENTITY_HINTS  # noqa: E402
 from memlayer.core import MemoryLayer  # noqa: E402
-from memlayer.ingest import StageAttempt, StageEpisode, StageIngester, parse_stage_name  # noqa: E402
+from memlayer.strategy import StageOutcome, StrategyMemory  # noqa: E402
 
 # harness stage name -> (pick primitive, place primitive) exactly as the training filenames spell them
 PRIMITIVES = {
@@ -74,8 +73,7 @@ class MemoryPromptAdapter(BasePolicyAdapter):
         self.open_width, self.release_gate = float(open_width), bool(release_gate)
         assert scope in ("stage", "episode"), scope
         self.scope = scope  # episode: once any stage is a trouble fact, run the whole episode on primitives
-        self.mem = MemoryLayer(db) if mode == "memory" else None
-        self.ingest = StageIngester(self.mem) if self.mem else None
+        self.sm = StrategyMemory(MemoryLayer(db), default="fixed", fallback="primitive", scope=scope) if mode == "memory" else None
         self.log_path = os.environ.get("X5_LOG")
         self.ep = 0
         self._task_prompt = None
@@ -85,9 +83,7 @@ class MemoryPromptAdapter(BasePolicyAdapter):
     def reset(self) -> None:
         self.inner.reset()
         self._reset_episode_state()
-        self._plan = {name: self._strategy_for(name) for name in self.stage_names}
-        if self.scope == "episode" and "primitive" in self._plan.values():
-            self._plan = {name: "primitive" for name in self.stage_names}
+        self._plan = self.sm.plan(self.stage_names) if self.sm else {name: self.mode for name in self.stage_names}
 
     def on_stage_done(self, name: str, t: int) -> None:
         self._done.append(name)
@@ -98,28 +94,19 @@ class MemoryPromptAdapter(BasePolicyAdapter):
         self._needs_open = bool(self.release_gate)
 
     def on_episode_end(self, ep_summary: dict) -> None:
-        stages = []
-        blocked = False
-        prev_t = 0
+        prev_t, outcomes = 0, []
         for name, passed in ep_summary["stage_done"].items():
-            verb, ents = parse_stage_name(name, ENTITY_HINTS)
             steps = None
             if passed and name in ep_summary.get("stage_steps", {}):
                 steps = int(ep_summary["stage_steps"][name]) - prev_t; prev_t = int(ep_summary["stage_steps"][name])
-            strategy = self._plan.get(name, self.mode if self.mode != "memory" else "fixed")
-            stages.append(StageAttempt(name=name, verb=f"{verb}@{strategy}", entities=ents, passed=bool(passed),
-                                       steps=steps, attempted=not blocked))
-            if not passed:
-                blocked = True
-        if self.ingest is not None:
-            self.ingest.observe(StageEpisode(episode_idx=self.ep, task=self._task_prompt or "task1", stages=stages,
-                                             success=bool(ep_summary.get("TSR", 0) >= 100.0),
-                                             total_steps=ep_summary.get("total_steps"),
-                                             meta={"seed": ep_summary.get("seed")}))
+            outcomes.append(StageOutcome(name, bool(passed), steps))
+        if self.sm is not None:
+            self.sm.record(self.ep, outcomes, self._plan, task=self._task_prompt or "task1",
+                           total_steps=ep_summary.get("total_steps"))
         if self.log_path:
             rec = {"ep": self.ep, "mode": self.mode, "plan": self._plan, "prompts_used": self._prompts_used,
                    "TSR": ep_summary.get("TSR"), "CSR": ep_summary.get("CSR"), "stage_done": ep_summary.get("stage_done"),
-                   "recall": self.ingest.recall_text() if self.ingest else ""}
+                   "recall": self.sm.explain(self.stage_names) if self.sm else ""}
             with open(self.log_path, "a") as f:
                 f.write(json.dumps(rec) + "\n")
         self.ep += 1
@@ -136,19 +123,6 @@ class MemoryPromptAdapter(BasePolicyAdapter):
         self._done, self._closed, self._holding, self._prompts_used = [], 0, False, []
         self._needs_open = False
         self._plan = getattr(self, "_plan", {})
-
-    def _strategy_for(self, stage: str) -> str:
-        if self.mode != "memory":
-            return self.mode
-        verb, ents = parse_stage_name(stage, ENTITY_HINTS)
-        # decide on the manipulated object, not the shared destination: "place:basket" collects
-        # evidence from every stage that places into it and would flip all of them at once
-        objs = [e for e in ents if e.startswith("object:")] or ents
-        for ent in objs:
-            f = self.mem._fact(ent, f"trouble:{verb}@fixed")
-            if f is not None and f.value == "True":
-                return "primitive"
-        return "fixed"
 
     def _current_stage(self) -> str | None:
         for name in self.stage_names:

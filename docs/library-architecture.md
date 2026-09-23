@@ -105,3 +105,8 @@ task planners, skill libraries, teleop annotations).
   Known ambiguity: every entity in a failing stage gets blamed (object *and* basket)
   until another task disambiguates. Video/keyframe understanding is still TODO.
 - **v0.1 release**: L1–L3 + benchmark adapter + docs.
+- **L5** ✓ (23 Sep): strategy memory — `memlayer/strategy.py`: per-stage, per-strategy trouble
+  facts (`trouble:<verb>@<strategy>`) decide *how to run* the next episode (`plan()`), outcomes
+  feed back through `record()`. Validated on the real fine-tuned π₀.₅ (X5, Day 13c): 15/51 → 30/51,
+  matching the oracle planner after 3 episodes. `scope="episode"` is the default; `scope="stage"`
+  is the ablation that lost to no memory (interventions must match the policy's training granularity).
