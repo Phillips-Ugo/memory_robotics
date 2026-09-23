@@ -865,3 +865,23 @@ times" — the memory layer recovers the policy's stage-2 weakness from outcomes
 "slow" facts (`tomato_sauce`, `basket`) come from single long successes at ep 38/50; the slow-rule needs ≥3 samples
 before it speaks. Pod could not be resumed to pull the artifacts (RunPod balance too low); `scripts/runpod_fetch_run.sh`
 does resume → rsync (train log, eval videos, checkpoint 7999 params) → terminate once funds are added.
+
+## Day 13b — 2026-09-23: X5 design — memlayer in the loop of the fine-tuned π₀.₅
+
+**Question.** Can cross-episode memory raise a real VLA's success without touching its weights?
+**Lever.** The harness feeds one full-task prompt for the whole episode; the model was trained on
+primitives (`pick cookies`, `place cookies into basket`, `pick tomato sauce`, `place tomato into
+basket`). Stage 2 fails 36/51 under the full prompt.
+**Arms** (`scripts/03_rma_memory_adapter.py`, 51 trials each, seed 50, same checkpoint 7999):
+- `fixed` — full prompt always (today's 15/51).
+- `primitive` — per-stage primitives, pick→place switched on gripper closure; within-episode stage
+  progress comes from the harness's stage checks via a new adapter hook (`patch_rma_adapter_hooks.py`).
+  This is the oracle-planner upper bound (what RoboMemArena's VLM planner tries to produce).
+- `memory` — starts as `fixed`; memlayer ingests each episode's per-stage outcomes keyed by strategy
+  (`trouble:place@fixed` on `object:tomato_sauce`); once a stage is a trouble fact (≥3 attempts,
+  ≥50 % failure in the last 6) that stage switches to primitives. Facts are per strategy so the fix
+  never erases the evidence that motivated it.
+**Metric.** Experience curve (success vs episode index) and its AUC — the memory arm should track
+`fixed` for ~3 episodes, then rise toward `primitive`. Also stage-2 success and steps per success.
+**Caveat.** Within-episode stage detection is given (Problem A); what is learned across episodes is
+*whether this stage needs help* (Problem B). Same seeds across arms → paired comparison.
