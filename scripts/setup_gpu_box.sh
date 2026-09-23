@@ -50,6 +50,7 @@ uv pip install --python vendor/rma-venv/bin/python \
 
 # record per-stage completion steps + results.json (memlayer ingests these)
 python3 scripts/patch_rma_stage_timing.py || true
+python3 scripts/patch_rma_adapter_hooks.py || true
 
 # LIBERO asks about a dataset folder on first import; accept defaults non-interactively
 printf 'N\n' | vendor/rma-venv/bin/python -c "import sys; sys.path.insert(0, 'vendor/RoboMemArena/evaluation_benchmark/libero_fork'); import libero" || true
