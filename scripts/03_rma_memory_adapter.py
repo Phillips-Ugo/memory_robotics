@@ -64,12 +64,14 @@ def _load_inner(host, port):
 
 class MemoryPromptAdapter(BasePolicyAdapter):
     def __init__(self, mode: str = "memory", db: str = "outputs/x5_memory.db", host=None, port=None,
-                 grasp_width: float = 0.065, grasp_hold: int = 5, stage_names: str = "") -> None:
+                 grasp_width: float = 0.065, grasp_hold: int = 5, open_width: float = 0.072,
+                 release_gate: bool = True, stage_names: str = "") -> None:
         assert mode in ("fixed", "primitive", "memory"), mode
         self.mode = mode
         self.inner = _load_inner(host, port)
         self.stage_names = [s for s in stage_names.split("|") if s] or list(PRIMITIVES)
         self.grasp_width, self.grasp_hold = float(grasp_width), int(grasp_hold)
+        self.open_width, self.release_gate = float(open_width), bool(release_gate)
         self.mem = MemoryLayer(db) if mode == "memory" else None
         self.ingest = StageIngester(self.mem) if self.mem else None
         self.log_path = os.environ.get("X5_LOG")
@@ -87,6 +89,9 @@ class MemoryPromptAdapter(BasePolicyAdapter):
         self._done.append(name)
         self._closed = 0
         self._holding = False
+        # the stage check fires when the object is in place even if it is still in the gripper
+        # (the full-task prompt tends to keep holding): a new grasp only counts after a release
+        self._needs_open = bool(self.release_gate)
 
     def on_episode_end(self, ep_summary: dict) -> None:
         stages = []
@@ -125,6 +130,7 @@ class MemoryPromptAdapter(BasePolicyAdapter):
     # ---- policy over prompts -------------------------------------------------------
     def _reset_episode_state(self):
         self._done, self._closed, self._holding, self._prompts_used = [], 0, False, []
+        self._needs_open = False
         self._plan = getattr(self, "_plan", {})
 
     def _strategy_for(self, stage: str) -> str:
@@ -153,6 +159,10 @@ class MemoryPromptAdapter(BasePolicyAdapter):
         pick, place = PRIMITIVES[stage]
         state = np.asarray(obs["observation/state"], dtype=np.float32)
         width = float(abs(state[6] - state[7])) if state.shape[0] >= 8 else 1.0
+        if self._needs_open:
+            if width >= self.open_width:
+                self._needs_open = False
+            return pick
         if width < self.grasp_width:
             self._closed += 1
         else:
