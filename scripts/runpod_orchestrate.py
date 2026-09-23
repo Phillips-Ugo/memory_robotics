@@ -130,11 +130,12 @@ def main() -> None:
             print(f"reusing pod {st['id']} at {ip}:{port}")
         else:
             pod, ip, port = provision()
-        auto_stop = "nohup sh -c 'sleep 21600; runpodctl stop pod $RUNPOD_POD_ID' > /dev/null 2>&1 &"
+        auto_stop = "(nohup sh -c 'sleep 21600; runpodctl stop pod $RUNPOD_POD_ID' > /dev/null 2>&1 < /dev/null &)"
         ssh(ip, port, auto_stop)
         ssh(ip, port, f"mkdir -p /workspace && echo 'export HF_TOKEN={tok}' > /workspace/token.sh")
+        # fully detach (stdin/stdout/stderr) or ssh waits for the background job to finish
         launch = ("curl -sSL https://raw.githubusercontent.com/Phillips-Ugo/memory_robotics/main/scripts/m2b_pipeline.sh "
-                  "-o /workspace/m2b.sh && nohup bash /workspace/m2b.sh > /workspace/m2b.log 2>&1 & sleep 2; echo launched")
+                  "-o /workspace/m2b.sh && (nohup bash /workspace/m2b.sh > /workspace/m2b.log 2>&1 < /dev/null &) ; sleep 2; echo launched")
         print(ssh(ip, port, launch)[1].strip())
         # stream until the sentinel or the process ends
         ssh(ip, port, "tail -n +1 -f /workspace/m2b.log | grep --line-buffered -v Xet & "
@@ -148,9 +149,9 @@ def main() -> None:
     ENV = ". /workspace/env.sh; cd /workspace/memory_robotics/vendor/openpi"
     if action == "train":
         # keep the pod alive long enough: reset the auto-stop to 8 h
-        ssh(ip, port, "pkill -f 'sleep 21600' ; nohup sh -c 'sleep 28800; runpodctl stop pod $RUNPOD_POD_ID' > /dev/null 2>&1 &")
-        cmd = (f"{ENV} && XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 nohup uv run scripts/train.py pi05_rma_lora --exp-name t1 "
-               f"--overwrite --no-wandb-enabled > /workspace/train_t1.log 2>&1 & sleep 5; pgrep -fc 'train.py pi05_rma_lora'")
+        ssh(ip, port, "pkill -f 'sleep 21600' ; (nohup sh -c 'sleep 28800; runpodctl stop pod $RUNPOD_POD_ID' > /dev/null 2>&1 < /dev/null &)")
+        cmd = (f"{ENV} && (XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 nohup uv run scripts/train.py pi05_rma_lora --exp-name t1 "
+               f"--overwrite --no-wandb-enabled > /workspace/train_t1.log 2>&1 < /dev/null &) ; sleep 5; pgrep -fc 'train.py pi05_rma_lora'")
         print("train procs:", ssh(ip, port, cmd)[1].strip())
         return
     if action == "train-status":
@@ -163,8 +164,8 @@ def main() -> None:
         step = sys.argv[2] if len(sys.argv) > 2 else "8000"
         trials = sys.argv[3] if len(sys.argv) > 3 else "51"
         ckpt = f"checkpoints/pi05_rma_lora/t1/{step}"
-        serve = (f"{ENV} && pkill -f serve_policy; nohup uv run scripts/serve_policy.py policy:checkpoint "
-                 f"--policy.config=pi05_rma_lora --policy.dir={ckpt} > /workspace/server.log 2>&1 & "
+        serve = (f"{ENV} && pkill -f serve_policy; (nohup uv run scripts/serve_policy.py policy:checkpoint "
+                 f"--policy.config=pi05_rma_lora --policy.dir={ckpt} > /workspace/server.log 2>&1 < /dev/null &) ; "
                  "for i in $(seq 1 60); do grep -q 'server listening' /workspace/server.log && break; sleep 5; done; "
                  "tail -1 /workspace/server.log")
         print(ssh(ip, port, serve, timeout=600)[1].strip())
@@ -179,6 +180,22 @@ def main() -> None:
                         f"root@{ip}:/workspace/memory_robotics/outputs/rma_pi05_ft_task1/results.json",
                         "outputs/rma_pi05_ft_task1/results.json"])
         print("fetched outputs/rma_pi05_ft_task1/results.json")
+        return
+    if action == "watch":
+        log = sys.argv[2] if len(sys.argv) > 2 else "/workspace/m2b.log"
+        seen = 0
+        while True:
+            rc, out = ssh(ip, port, f"grep -v Xet {log} 2>/dev/null | grep -v 'Map:\\|Creating parquet'", timeout=60)
+            lines = out.splitlines()
+            for l in lines[seen:]:
+                print(l, flush=True)
+            seen = len(lines)
+            if any(k in out for k in ("M2B PIPELINE OK", "Traceback", "Error:")):
+                break
+            rc2, alive = ssh(ip, port, "pgrep -fc 'm2b.sh|train.py'", timeout=30)
+            if alive.strip() == "0":
+                print("[no pipeline/train process on the pod]"); break
+            time.sleep(60)
         return
     if action == "ssh":
         print(f"ssh {' '.join(SSH_OPTS)} -p {st['port']} root@{st['ip']}")
