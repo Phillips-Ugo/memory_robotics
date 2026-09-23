@@ -31,7 +31,7 @@ def poll() -> dict:
     st = load()
     cmd = ("grep -a 'Step [0-9]*: grad_norm' /workspace/train_t1.log; echo '---PROG'; grep -a 'Progress on' /workspace/train_t1.log | tail -1; "
            "echo '---GPU'; nvidia-smi --query-gpu=memory.used,memory.total,utilization.gpu,temperature.gpu --format=csv,noheader; "
-           "echo '---PROC'; pgrep -fc 'train.py pi05_rma_lora'; echo '---CKPT'; ls /workspace/memory_robotics/vendor/openpi/checkpoints/pi05_rma_lora/t1/ 2>/dev/null | grep -v tmp | tr '\\n' ' '; "
+           "echo '---PROC'; pgrep -fc '^[^ ]*python[^ ]* scripts/train.py'; echo '---CKPT'; ls /workspace/memory_robotics/vendor/openpi/checkpoints/pi05_rma_lora/t1/ 2>/dev/null | grep -v tmp | tr '\\n' ' '; "
            "echo; echo '---MTIME'; stat -c %Y /workspace/train_t1.log; date +%s")
     rc, out = ssh(st["ip"], st["port"], cmd, timeout=90)
     steps, prog, gpu, proc, ckpt, mtime = [], None, None, None, [], (None, None)
