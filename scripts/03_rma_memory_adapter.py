@@ -31,6 +31,14 @@ _REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
+_HARNESS = _REPO_ROOT / "vendor/RoboMemArena/evaluation_benchmark/scripts"
+if str(_HARNESS) not in sys.path:
+    sys.path.insert(0, str(_HARNESS))
+try:
+    from policy_adapter import BasePolicyAdapter  # the harness insists on a subclass
+except ImportError:  # importing outside the harness (tests)
+    BasePolicyAdapter = object
+
 from memlayer.adapters.robomemarena import ENTITY_HINTS  # noqa: E402
 from memlayer.core import MemoryLayer  # noqa: E402
 from memlayer.ingest import StageAttempt, StageEpisode, StageIngester, parse_stage_name  # noqa: E402
@@ -54,7 +62,7 @@ def _load_inner(host, port):
     return mod.Pi05WebsocketAdapter(host=host, port=port)
 
 
-class MemoryPromptAdapter:
+class MemoryPromptAdapter(BasePolicyAdapter):
     def __init__(self, mode: str = "memory", db: str = "outputs/x5_memory.db", host=None, port=None,
                  grasp_width: float = 0.065, grasp_hold: int = 5, stage_names: str = "") -> None:
         assert mode in ("fixed", "primitive", "memory"), mode
