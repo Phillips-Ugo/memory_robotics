@@ -194,16 +194,16 @@ $('recipe').innerHTML = [['Adapter', meta.recipe], ['Data', meta.data], ['Hardwa
 const ev = M.eval;
 let ours = ['pending · run eval on a checkpoint', '—', '—'];
 if (ev) {
-  const n = ev.num_trials || ev.trials || 51;
-  const tsr = ev.task_success_rate ?? ev.tsr ?? ev.success_rate;
-  const csr = ev.subtask_success_rate ?? ev.csr;
-  ours = [`evaluated`, tsr == null ? '—' : (100*tsr).toFixed(1) + ' %', csr == null ? '—' : (100*csr).toFixed(1) + ' %'];
+  const n = (ev.episodes || []).length || 51;
+  const k = Math.round(ev.TSR * n / 100);
+  const z = 1.96, ph = k / n, d = 1 + z*z/n, c = (ph + z*z/(2*n)) / d, h = z * Math.sqrt(ph*(1-ph)/n + z*z/(4*n*n)) / d;
+  ours = [`LoRA, batch 16, 8k steps, 1× L40 · evaluated at step 8000`, `${k} / ${n} → ${ev.TSR.toFixed(1)} %<br><small>95% CI ${(100*(c-h)).toFixed(0)}–${(100*(c+h)).toFixed(0)} %</small>`, `${ev.CSR.toFixed(1)} %`];
 }
 $('compare').innerHTML = `
   <tr><td>π₀.₅ · paper baseline</td><td>${T.paper_recipe || ''}</td><td class="num">${T.paper_tsr} %</td><td class="num">${T.paper_csr} %</td></tr>
   <tr><td>π₀.₅ · stock pi05_libero (ours, no fine-tune)</td><td>zero-shot, M2</td><td class="num">0 / 51 → 0 %</td><td class="num">—</td></tr>
   <tr class="us"><td>π₀.₅ · this LoRA run</td><td>${ours[0]}</td><td class="num">${ours[1]}</td><td class="num">${ours[2]}</td></tr>`;
-$('comparenote').textContent = 'The paper does not publish its training loss curve, so the only fair comparison is the eval number. Our run is a task-1 specialist with ~5% of the paper\'s compute; matching or beating 20% TSR on task 1 is the bar for M2b.';
+$('comparenote').textContent = 'The paper does not publish its training loss curve, so the only fair comparison is the eval number. Our run is a task-1 specialist with ~5% of the paper\'s compute; matching or beating 20% TSR on task 1 was the bar for M2b.';
 
 // charts
 Chart.defaults.color = css('--ink-2'); Chart.defaults.borderColor = css('--grid');

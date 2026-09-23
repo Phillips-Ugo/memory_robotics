@@ -826,3 +826,34 @@ Matches the checkpoint's reported ballpark. The two failures reached 0.96–0.98
 near-misses just under the 0.95-coverage success threshold, not blow-ups. First
 self-produced eval number: Phase 0 milestone done. Video of episode 0 in
 `outputs/rollout_ep0.mp4`.
+
+## Day 13 — 2026-09-23: M2b result — LoRA π₀.₅ beats the paper's task-1 baseline
+
+**Run.** `pi05_rma_lora` / `t1`: LoRA (gemma_2b_lora + gemma_300m_lora) from `pi05_libero`, batch 16, 8000 steps,
+cosine lr peak 5e-5, 1× L40 (RunPod community, $0.69/h). 2.9 s/step, 6 h 36 min wall clock, no NaN/spikes; loss
+0.144 (step 0) → 0.0090 (1000) → 0.0045 (2400) → 0.0017 (7900). Final checkpoint `t1/7999`. Live dashboard:
+https://claude.ai/artifact/7Q3rKyq8wL8iKgcLQPrsxX (`scripts/train_monitor.py` + `scripts/train_dashboard.html`).
+
+**Eval** (`eval_task1_only.py`, 51 trials, seed 50, max 2500 steps, `outputs/rma_pi05_ft_task1/results.json`):
+
+| policy | recipe | TSR | CSR |
+|---|---|---|---|
+| π₀.₅ paper baseline (task-1 category) | full FT, batch 128, 40k steps, 4× H100 | 20.0 % | 42.8 % |
+| stock `pi05_libero` (Day 11) | zero-shot | 0/51 = 0 % | — |
+| **ours, LoRA task-1 specialist** | batch 16, 8k steps, 1× L40, ~$5 | **15/51 = 29.4 %** (Wilson 95 % CI 18.7–43.0) | **64.7 %** |
+
+Per stage: place-cookies 51/51, place-tomato 15/51. Every failure is the second stage — the policy nails the first
+pick-and-place, then either re-grasps the cookies or stalls on the sauce. This is exactly the memory-shaped failure
+RoboMemArena is about (does the policy know stage 1 is done?), and `stage_steps` are now in results.json for
+memlayer's RoboMemArena adapter to ingest.
+
+**Caveats.** Our number is not apples-to-apples with the paper: single task specialist vs. their multi-task
+training, and the CI overlaps their 20 %. It does establish (a) the full M2b loop works end to end from the Mac,
+(b) a $5 LoRA is a usable task-1 policy for the memory experiments (M3), (c) stage-2 failure is the lever.
+
+**Ops lessons.** Training stdout must be unbuffered (`PYTHONUNBUFFERED=1`) or openpi's `Step N:` lines never reach
+the log. `pkill -f <pattern>` inside an ssh one-liner kills the ssh shell itself when the pattern appears in the
+command line — three "silent" launches were this. `runpodctl stop pod $RUNPOD_POD_ID` does not work from nohup
+(no config, empty env) — the pod's autostop never actually worked; stop pods from the Mac via the API instead.
+The Mac slept 04:46–08:25 UTC and paused every local watcher (`caffeinate` next time). Pod is **stopped**, not
+terminated: the volume still holds `train_t1.log`, the 51 eval videos and checkpoints 2000/4000/6000/7999.

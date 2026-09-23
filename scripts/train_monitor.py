@@ -34,6 +34,8 @@ def poll() -> dict:
            "echo '---PROC'; pgrep -fc '^[^ ]*python[^ ]* scripts/train.py'; echo '---CKPT'; ls /workspace/memory_robotics/vendor/openpi/checkpoints/pi05_rma_lora/t1/ 2>/dev/null | grep -v tmp | tr '\\n' ' '; "
            "echo; echo '---MTIME'; stat -c %Y /workspace/train_t1.log; date +%s")
     rc, out = ssh(st["ip"], st["port"], cmd, timeout=90)
+    if rc != 0 and not out.strip():
+        raise RuntimeError(f"ssh rc={rc}")
     steps, prog, gpu, proc, ckpt, mtime = [], None, None, None, [], (None, None)
     section = None
     for line in out.splitlines():
@@ -115,7 +117,17 @@ def main() -> None:
     loop = int(sys.argv[sys.argv.index("--loop") + 1]) if "--loop" in sys.argv else 0
     while True:
         prev = json.loads(OUT.read_text()) if OUT.exists() else {}
-        m = poll()
+        try:
+            m = poll()
+        except Exception as e:  # ssh hiccup: keep the last good snapshot
+            m = None
+            print(f"[{datetime.now(timezone.utc).isoformat(timespec='seconds')}] poll failed: {e}", flush=True)
+        if m is None or (m["progress"] is None and m["gpu"] is None):
+            print(f"[{datetime.now(timezone.utc).isoformat(timespec='seconds')}] poll returned nothing (pod unreachable?) - keeping last snapshot", flush=True)
+            if not loop:
+                break
+            time.sleep(loop)
+            continue
         m["health"] = health(m)
         m["meta"] = RUN_META
         hist = prev.get("history", [])
