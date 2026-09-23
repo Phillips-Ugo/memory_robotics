@@ -1,0 +1,220 @@
+<title>Task-1 LoRA Run</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --bg:#F2F4F6;--surface:#FFFFFF;--surface-2:#E9EDF1;--line:#D5DBE2;--ink:#1A222C;--ink-2:#55616E;--ink-3:#8A96A3;
+  --accent:#1F6F8B;--accent-soft:#D6E8EF;--ok:#2E7D4F;--ok-soft:#DCEFE3;--warn:#A8690F;--warn-soft:#F6E7C9;--crit:#B3352B;--crit-soft:#F5D9D6;
+  --grid:#E3E8ED;--target:#8A96A3;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#12181F;--surface:#1A222B;--surface-2:#222C36;--line:#2F3B47;--ink:#E7ECF1;--ink-2:#A6B2BE;--ink-3:#6F7C89;
+  --accent:#5FB3D0;--accent-soft:#1E3A46;--ok:#6CC391;--ok-soft:#1D3A2A;--warn:#E0A94A;--warn-soft:#3E3018;--crit:#EF7B72;--crit-soft:#432220;
+  --grid:#243039;--target:#6F7C89;
+}}
+:root[data-theme="dark"]{
+  --bg:#12181F;--surface:#1A222B;--surface-2:#222C36;--line:#2F3B47;--ink:#E7ECF1;--ink-2:#A6B2BE;--ink-3:#6F7C89;
+  --accent:#5FB3D0;--accent-soft:#1E3A46;--ok:#6CC391;--ok-soft:#1D3A2A;--warn:#E0A94A;--warn-soft:#3E3018;--crit:#EF7B72;--crit-soft:#432220;
+  --grid:#243039;--target:#6F7C89;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 "IBM Plex Sans",system-ui,sans-serif;padding-block:24px 48px;padding-inline:clamp(16px,3vw,40px);max-width:1240px;margin-inline:auto}
+h1,h2,h3{font-family:"IBM Plex Sans Condensed","IBM Plex Sans",system-ui,sans-serif;text-wrap:balance;margin:0;line-height:1.15}
+h1{font-size:28px;font-weight:600}
+h2{font-size:17px;font-weight:600;color:var(--ink)}
+.mono,.num{font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums}
+.eyebrow{font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);font-weight:500}
+header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 24px;margin-bottom:20px}
+header .sub{color:var(--ink-2);font-size:14px;margin-top:4px}
+.pill{display:inline-flex;align-items:center;gap:8px;padding:6px 12px;border-radius:999px;font-weight:600;font-size:14px;background:var(--ok-soft);color:var(--ok)}
+.pill.warn{background:var(--warn-soft);color:var(--warn)}.pill.crit{background:var(--crit-soft);color:var(--crit)}.pill.done{background:var(--accent-soft);color:var(--accent)}
+.pill i{width:9px;height:9px;border-radius:50%;background:currentColor;display:inline-block}
+.strip{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px 20px;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:16px 24px;margin-bottom:16px}
+.strip .k{font-size:12px;color:var(--ink-3);letter-spacing:.06em;text-transform:uppercase;font-weight:500}
+.strip .v{font-size:24px;font-weight:500;margin-top:2px;line-height:1.2}
+.strip .v small{font-size:13px;color:var(--ink-2);font-weight:400;margin-left:4px}
+.bar{grid-column:1/-1;height:10px;background:var(--surface-2);border-radius:5px;overflow:hidden;position:relative}
+.bar>b{position:absolute;left:0;top:0;bottom:0;background:var(--accent);border-radius:5px}
+.bar>s{position:absolute;top:-3px;width:2px;height:16px;background:var(--target);opacity:.6}
+.grid{display:grid;grid-template-columns:minmax(0,2fr) minmax(280px,1fr);gap:16px}
+@media (max-width:820px){.grid{grid-template-columns:1fr}}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px 20px;min-width:0}
+.panel-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:10px;flex-wrap:wrap}
+.panel-head .note{font-size:13px;color:var(--ink-2)}
+.chart{position:relative;height:280px;max-width:100%}.chart.small{height:170px}
+.stack{display:grid;gap:16px;align-content:start}
+.checks{display:grid;gap:8px;margin:0;padding:0;list-style:none}
+.checks li{display:grid;grid-template-columns:22px 1fr;gap:10px;align-items:start;padding:10px 12px;border-radius:8px;background:var(--surface-2)}
+.checks li .dot{width:12px;height:12px;border-radius:50%;margin-top:5px;background:var(--ok)}
+.checks li.warn .dot{background:var(--warn)}.checks li.crit .dot{background:var(--crit)}.checks li.idle .dot{background:var(--ink-3)}
+.checks li b{display:block;font-weight:600;font-size:14px}
+.checks li span{font-size:13px;color:var(--ink-2)}
+.gauges{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.gauge .k{font-size:12px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.06em}
+.gauge .v{font-size:20px;font-weight:500}
+.gauge .track{height:6px;background:var(--surface-2);border-radius:3px;margin-top:6px;overflow:hidden}
+.gauge .track b{display:block;height:100%;background:var(--accent);border-radius:3px}
+.ckpts{display:flex;flex-wrap:wrap;gap:8px}
+.ck{padding:6px 10px;border-radius:6px;border:1px solid var(--line);font-size:13px;color:var(--ink-3);background:var(--surface-2)}
+.ck.have{border-color:var(--accent);color:var(--accent);background:var(--accent-soft);font-weight:600}
+.ck.keep{border-style:solid;border-width:2px}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th{text-align:left;font-weight:500;color:var(--ink-3);font-size:12px;letter-spacing:.06em;text-transform:uppercase;padding:8px 10px;border-bottom:1px solid var(--line)}
+td{padding:10px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:0}
+td.num{text-align:right;white-space:nowrap}
+.tbl{overflow-x:auto}
+.foot{margin-top:16px;color:var(--ink-3);font-size:13px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}
+@media (max-width:820px){.two{grid-template-columns:1fr}}
+.us{color:var(--accent);font-weight:600}
+</style>
+
+<header>
+  <div>
+    <div class="eyebrow">M2b · π₀.₅ LoRA fine-tune · RoboMemArena task 1</div>
+    <h1>Task-1 LoRA Run</h1>
+    <div class="sub" id="sub"></div>
+  </div>
+  <div id="status" class="pill"><i></i><span>Loading</span></div>
+</header>
+
+<section class="strip" id="strip"></section>
+
+<div class="grid">
+  <div class="stack">
+    <div class="panel">
+      <div class="panel-head"><h2>Training loss</h2><div class="note" id="lossnote"></div></div>
+      <div class="chart"><canvas id="loss"></canvas></div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><h2>Gradient norm</h2><div class="note">Spikes above 5× the running median are flagged.</div></div>
+      <div class="chart small"><canvas id="grad"></canvas></div>
+    </div>
+  </div>
+  <div class="stack">
+    <div class="panel">
+      <div class="panel-head"><h2>Health checks</h2></div>
+      <ul class="checks" id="checks"></ul>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><h2>GPU</h2><div class="note" id="gpuname"></div></div>
+      <div class="gauges" id="gauges"></div>
+      <div class="chart small" style="margin-top:12px"><canvas id="rate"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<div class="two">
+  <div class="panel">
+    <div class="panel-head"><h2>Checkpoints</h2><div class="note">saved every 1000 steps; 2000-multiples are kept, the rest roll</div></div>
+    <div class="ckpts" id="ckpts"></div>
+  </div>
+  <div class="panel">
+    <div class="panel-head"><h2>Recipe</h2></div>
+    <table><tbody id="recipe"></tbody></table>
+  </div>
+</div>
+
+<div class="panel" style="margin-top:16px">
+  <div class="panel-head"><h2>How close are we to the paper</h2><div class="note">RoboMemArena task-1 category · 51 trials/task, seed 50</div></div>
+  <div class="tbl"><table>
+    <thead><tr><th>Policy</th><th>Recipe</th><th class="num">Task success (TSR)</th><th class="num">Subtask success (CSR)</th></tr></thead>
+    <tbody id="compare"></tbody>
+  </table></div>
+  <p class="foot" id="comparenote"></p>
+</div>
+
+<script id="data" type="application/json">__METRICS__</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+const M = JSON.parse(document.getElementById('data').textContent);
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const $ = id => document.getElementById(id);
+const fmt = (x, d=0) => x == null ? '—' : Number(x).toLocaleString(undefined, {maximumFractionDigits: d, minimumFractionDigits: d});
+const P = M.progress || {}, G = M.gpu || {}, steps = M.steps || [], meta = M.meta || {}, T = meta.targets || {};
+const total = P.total || 8000, cur = P.step || 0, pct = Math.min(100, 100 * cur / total);
+const last = steps[steps.length - 1];
+const flags = M.health || [];
+const done = M.checkpoints && M.checkpoints.includes(total) && M.train_procs === 0;
+const dead = M.train_procs === 0 && !done;
+
+// status pill
+const st = $('status');
+let cls = 'pill', txt = 'Training · on course';
+if (done) { cls += ' done'; txt = 'Finished · 8000 steps'; }
+else if (dead || flags.some(f => /NaN|not running/.test(f))) { cls += ' crit'; txt = dead ? 'Stopped · process not running' : 'Diverged'; }
+else if (flags.length) { cls += ' warn'; txt = 'Training · check flags'; }
+st.className = cls; st.querySelector('span').textContent = txt;
+const polled = new Date(M.polled_at);
+$('sub').textContent = `${meta.run || ''} on ${meta.gpu || ''} · last polled ${polled.toLocaleString()} (page updates at every poll)`;
+
+// strip
+const eta = P.remaining ? P.remaining : '—';
+$('strip').innerHTML = `
+  <div><div class="k">Step</div><div class="v num">${fmt(cur)}<small>/ ${fmt(total)}</small></div></div>
+  <div><div class="k">Done</div><div class="v num">${fmt(pct,1)}<small>%</small></div></div>
+  <div><div class="k">Speed</div><div class="v num">${P.sec_per_step ? P.sec_per_step.toFixed(2) : '—'}<small>s / step</small></div></div>
+  <div><div class="k">Remaining</div><div class="v num">${eta}</div></div>
+  <div><div class="k">Elapsed</div><div class="v num">${P.elapsed || '—'}</div></div>
+  <div><div class="k">Latest loss</div><div class="v num">${last ? last.loss.toFixed(4) : '—'}<small>${last ? '@ ' + fmt(last.step) : 'awaits step 100'}</small></div></div>
+  <div class="bar"><b style="width:${pct}%"></b>${[1000,2000,3000,4000,5000,6000,7000].map(s => `<s style="left:${100*s/total}%"></s>`).join('')}</div>`;
+
+// checks
+const lossVals = steps.map(s => s.loss);
+const first = steps.length ? steps[0].loss : null;
+const items = [];
+const hasFlag = re => flags.find(f => re.test(f));
+items.push({c: hasFlag(/NaN/) ? 'crit' : 'ok', b: 'Finite loss and gradients', s: hasFlag(/NaN/) || 'No NaN or inf in any logged step.'});
+const trend = hasFlag(/trending up/);
+items.push({c: trend ? 'warn' : steps.length >= 12 ? 'ok' : 'idle', b: 'Loss is not rising', s: trend || (steps.length >= 12 ? `Last-6 mean ${(lossVals.slice(-6).reduce((a,b)=>a+b,0)/6).toFixed(4)} vs prior-6 ${(lossVals.slice(-12,-6).reduce((a,b)=>a+b,0)/6).toFixed(4)}.` : `Needs 12 logged points (step ${12*(meta.log_every||100)}); have ${steps.length}.`)});
+const spike = hasFlag(/spike/);
+items.push({c: spike ? 'warn' : steps.length >= 6 ? 'ok' : 'idle', b: 'No gradient spike', s: spike || (steps.length >= 6 ? `Latest grad norm ${last.grad_norm.toFixed(3)}.` : `Needs 6 logged points; have ${steps.length}.`)});
+const proc = hasFlag(/not running/);
+items.push({c: proc ? (done ? 'ok' : 'crit') : 'ok', b: done ? 'Run finished' : 'Process alive', s: done ? 'Final checkpoint written.' : (proc || `${M.train_procs} training process(es) on the pod.`)});
+const stale = hasFlag(/no log output/);
+items.push({c: stale ? 'warn' : 'ok', b: 'Log still moving', s: stale || `Last write ${M.log_age_s == null ? '—' : Math.round(M.log_age_s/60)} min before the poll.`});
+const slow = P.sec_per_step && P.sec_per_step > 4.0;
+items.push({c: slow ? 'warn' : 'ok', b: 'Step rate normal', s: slow ? `${P.sec_per_step}s/step is slower than the 2.9s measured at launch.` : `Baseline 2.9 s/step on the L40 (≈6.4 h for 8000 steps).`});
+$('checks').innerHTML = items.map(i => `<li class="${i.c}"><span class="dot"></span><div><b>${i.b}</b><span>${i.s}</span></div></li>`).join('');
+
+// gauges
+$('gpuname').textContent = meta.gpu || '';
+const gg = [['Utilisation', G.util_pct, 100, '%'], ['Memory', G.mem_used_mib, G.mem_total_mib || 46068, ' MiB'], ['Temp', G.temp_c, 95, ' °C']];
+$('gauges').innerHTML = gg.map(([k,v,max,u]) => `<div class="gauge"><div class="k">${k}</div><div class="v num">${v == null ? '—' : (u === ' MiB' ? (v/1024).toFixed(1) + ' GB' : v + u)}</div><div class="track"><b style="width:${v == null ? 0 : Math.min(100, 100*v/max)}%"></b></div></div>`).join('');
+
+// checkpoints
+const have = M.checkpoints || [];
+$('ckpts').innerHTML = [1000,2000,3000,4000,5000,6000,7000,8000].map(s => `<span class="ck num ${have.includes(s) ? 'have' : ''} ${s % 2000 === 0 ? 'keep' : ''}">${s}</span>`).join('') +
+  (have.length ? '' : '<span class="note" style="font-size:13px;color:var(--ink-2)">none yet — first one lands at step 1000</span>');
+
+// recipe
+$('recipe').innerHTML = [['Adapter', meta.recipe], ['Data', meta.data], ['Hardware', meta.gpu], ['Logging', `loss every ${meta.log_every} steps, checkpoint every ${meta.save_every}`]].map(([k,v]) => `<tr><th style="border:0;padding:6px 10px 6px 0;white-space:nowrap">${k}</th><td style="border:0;padding:6px 0">${v || '—'}</td></tr>`).join('');
+
+// compare
+const ev = M.eval;
+let ours = ['pending · run eval on a checkpoint', '—', '—'];
+if (ev) {
+  const n = ev.num_trials || ev.trials || 51;
+  const tsr = ev.task_success_rate ?? ev.tsr ?? ev.success_rate;
+  const csr = ev.subtask_success_rate ?? ev.csr;
+  ours = [`evaluated`, tsr == null ? '—' : (100*tsr).toFixed(1) + ' %', csr == null ? '—' : (100*csr).toFixed(1) + ' %'];
+}
+$('compare').innerHTML = `
+  <tr><td>π₀.₅ · paper baseline</td><td>${T.paper_recipe || ''}</td><td class="num">${T.paper_tsr} %</td><td class="num">${T.paper_csr} %</td></tr>
+  <tr><td>π₀.₅ · stock pi05_libero (ours, no fine-tune)</td><td>zero-shot, M2</td><td class="num">0 / 51 → 0 %</td><td class="num">—</td></tr>
+  <tr class="us"><td>π₀.₅ · this LoRA run</td><td>${ours[0]}</td><td class="num">${ours[1]}</td><td class="num">${ours[2]}</td></tr>`;
+$('comparenote').textContent = 'The paper does not publish its training loss curve, so the only fair comparison is the eval number. Our run is a task-1 specialist with ~5% of the paper\'s compute; matching or beating 20% TSR on task 1 is the bar for M2b.';
+
+// charts
+Chart.defaults.color = css('--ink-2'); Chart.defaults.borderColor = css('--grid');
+Chart.defaults.font.family = '"IBM Plex Mono", ui-monospace, monospace'; Chart.defaults.font.size = 11;
+const base = {responsive: true, maintainAspectRatio: false, animation: false, plugins: {legend: {display: false}},
+  scales: {x: {type: 'linear', min: 0, max: total, ticks: {stepSize: 1000}, title: {display: true, text: 'step'}}, y: {beginAtZero: false}}};
+const line = (id, data, color, fill, y) => new Chart($(id), {type: 'line', data: {datasets: [{data, borderColor: color, backgroundColor: fill, fill: !!fill, pointRadius: data.length > 60 ? 0 : 2.5, pointBackgroundColor: color, borderWidth: 1.8, tension: .25}]},
+  options: {...base, scales: {...base.scales, y: {...base.scales.y, ...y}}}});
+$('lossnote').textContent = steps.length ? `${steps.length} points · step 0 loss ${first.toFixed(4)} → latest ${last.loss.toFixed(4)}` : 'first point after step 100 (~5 min in)';
+line('loss', steps.map(s => ({x: s.step, y: s.loss})), css('--accent'), css('--accent-soft'), {title: {display: true, text: 'flow-matching MSE'}});
+line('grad', steps.map(s => ({x: s.step, y: s.grad_norm})), css('--warn'), null, {beginAtZero: true});
+const H = (M.history || []).filter(h => h.step != null && h.sec_per_step);
+line('rate', H.map(h => ({x: h.step, y: h.sec_per_step})), css('--ok'), null, {title: {display: true, text: 's / step'}, suggestedMin: 2, suggestedMax: 4});
+</script>
