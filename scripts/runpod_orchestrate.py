@@ -5,6 +5,9 @@
     uv run python scripts/runpod_orchestrate.py pipeline       # full M2b through the smoke train, keep pod
     uv run python scripts/runpod_orchestrate.py ssh            # print the ssh command for the current pod
     uv run python scripts/runpod_orchestrate.py run "<cmd>"    # run a command on the current pod
+    uv run python scripts/runpod_orchestrate.py train         # launch the real 8k-step LoRA run (background on the pod)
+    uv run python scripts/runpod_orchestrate.py train-status  # last train log lines + checkpoints on disk
+    uv run python scripts/runpod_orchestrate.py eval [STEP] [TRIALS]   # serve checkpoint, run task-1 eval, fetch results.json
     uv run python scripts/runpod_orchestrate.py stop|terminate
 
 Needs RUNPOD_API_KEY and (for pipeline) HF_TOKEN in the environment; ~/.ssh/id_ed25519
@@ -141,6 +144,42 @@ def main() -> None:
     st = load()
     if not st:
         raise SystemExit("no current pod (outputs/runpod_pod.json)")
+    ip, port = st["ip"], st["port"]
+    ENV = ". /workspace/env.sh; cd /workspace/memory_robotics/vendor/openpi"
+    if action == "train":
+        # keep the pod alive long enough: reset the auto-stop to 8 h
+        ssh(ip, port, "pkill -f 'sleep 21600' ; nohup sh -c 'sleep 28800; runpodctl stop pod $RUNPOD_POD_ID' > /dev/null 2>&1 &")
+        cmd = (f"{ENV} && XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 nohup uv run scripts/train.py pi05_rma_lora --exp-name t1 "
+               f"--overwrite --no-wandb-enabled > /workspace/train_t1.log 2>&1 & sleep 5; pgrep -fc 'train.py pi05_rma_lora'")
+        print("train procs:", ssh(ip, port, cmd)[1].strip())
+        return
+    if action == "train-status":
+        cmd = ("grep -v Xet /workspace/train_t1.log | grep -i 'step\|loss\|error\|Traceback' | tail -8; "
+               "echo '-- checkpoints:'; ls /workspace/memory_robotics/vendor/openpi/checkpoints/pi05_rma_lora/t1/ 2>/dev/null | tail -5; "
+               "nvidia-smi --query-gpu=memory.used,utilization.gpu --format=csv,noheader")
+        print(ssh(ip, port, cmd)[1])
+        return
+    if action == "eval":
+        step = sys.argv[2] if len(sys.argv) > 2 else "8000"
+        trials = sys.argv[3] if len(sys.argv) > 3 else "51"
+        ckpt = f"checkpoints/pi05_rma_lora/t1/{step}"
+        serve = (f"{ENV} && pkill -f serve_policy; nohup uv run scripts/serve_policy.py policy:checkpoint "
+                 f"--policy.config=pi05_rma_lora --policy.dir={ckpt} > /workspace/server.log 2>&1 & "
+                 "for i in $(seq 1 60); do grep -q 'server listening' /workspace/server.log && break; sleep 5; done; "
+                 "tail -1 /workspace/server.log")
+        print(ssh(ip, port, serve, timeout=600)[1].strip())
+        ev = (". /workspace/env.sh; cd /workspace/memory_robotics/vendor/RoboMemArena/evaluation_benchmark && "
+              f"MUJOCO_GL=egl PYTHONUNBUFFERED=1 ../../rma-venv/bin/python scripts/eval_task1_only.py "
+              f"--adapter-spec /workspace/memory_robotics/scripts/02_rma_pi05_adapter.py:build_adapter "
+              f"--num-trials-per-task {trials} --seed 50 --video-out-path /workspace/memory_robotics/outputs/rma_pi05_ft_task1 "
+              "2>&1 | grep --line-buffered 'Episode\|Final result\|Results JSON\|Traceback\|Error'")
+        ssh(ip, port, ev, stream=True)
+        Path("outputs/rma_pi05_ft_task1").mkdir(parents=True, exist_ok=True)
+        subprocess.run(["scp", *SSH_OPTS, "-P", str(port),
+                        f"root@{ip}:/workspace/memory_robotics/outputs/rma_pi05_ft_task1/results.json",
+                        "outputs/rma_pi05_ft_task1/results.json"])
+        print("fetched outputs/rma_pi05_ft_task1/results.json")
+        return
     if action == "ssh":
         print(f"ssh {' '.join(SSH_OPTS)} -p {st['port']} root@{st['ip']}")
     elif action == "run":
