@@ -65,13 +65,15 @@ def _load_inner(host, port):
 class MemoryPromptAdapter(BasePolicyAdapter):
     def __init__(self, mode: str = "memory", db: str = "outputs/x5_memory.db", host=None, port=None,
                  grasp_width: float = 0.065, grasp_hold: int = 5, open_width: float = 0.072,
-                 release_gate: bool = True, stage_names: str = "") -> None:
+                 release_gate: bool = True, scope: str = "stage", stage_names: str = "") -> None:
         assert mode in ("fixed", "primitive", "memory"), mode
         self.mode = mode
         self.inner = _load_inner(host, port)
         self.stage_names = [s for s in stage_names.split("|") if s] or list(PRIMITIVES)
         self.grasp_width, self.grasp_hold = float(grasp_width), int(grasp_hold)
         self.open_width, self.release_gate = float(open_width), bool(release_gate)
+        assert scope in ("stage", "episode"), scope
+        self.scope = scope  # episode: once any stage is a trouble fact, run the whole episode on primitives
         self.mem = MemoryLayer(db) if mode == "memory" else None
         self.ingest = StageIngester(self.mem) if self.mem else None
         self.log_path = os.environ.get("X5_LOG")
@@ -84,6 +86,8 @@ class MemoryPromptAdapter(BasePolicyAdapter):
         self.inner.reset()
         self._reset_episode_state()
         self._plan = {name: self._strategy_for(name) for name in self.stage_names}
+        if self.scope == "episode" and "primitive" in self._plan.values():
+            self._plan = {name: "primitive" for name in self.stage_names}
 
     def on_stage_done(self, name: str, t: int) -> None:
         self._done.append(name)
