@@ -22,7 +22,7 @@ from __future__ import annotations
 import argparse
 import pathlib
 
-MARKER = "# --- memory_robotics: pi05_rma_lora ---"
+MARKER_TMPL = "# --- memory_robotics: {name} ---"
 
 
 def main() -> None:
@@ -32,7 +32,9 @@ def main() -> None:
     ap.add_argument("--init", default="gs://openpi-assets/checkpoints/pi05_libero/params")
     ap.add_argument("--batch-size", type=int, default=16)
     ap.add_argument("--steps", type=int, default=8000)
+    ap.add_argument("--name", default="pi05_rma_lora", help="TrainConfig name (one per dataset, e.g. pi05_rma_lora_t2)")
     args = ap.parse_args()
+    MARKER = MARKER_TMPL.format(name=args.name)
 
     p = pathlib.Path(args.config)
     src = p.read_text()
@@ -44,7 +46,7 @@ def main() -> None:
     block = f'''{MARKER}
 _CONFIGS.append(
     TrainConfig(
-        name="pi05_rma_lora",
+        name="{args.name}",
         model=pi0_config.Pi0Config(
             pi05=True, action_horizon=10, discrete_state_input=False,
             paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora",
@@ -74,7 +76,7 @@ _CONFIGS.append(
 '''
     src = src.replace(anchor, block + anchor)
     p.write_text(src)
-    print(f"patched {p}: pi05_rma_lora -> repo_id={args.repo_id}, init={args.init}, "
+    print(f"patched {p}: {args.name} -> repo_id={args.repo_id}, init={args.init}, "
           f"batch={args.batch_size}, steps={args.steps}")
 
 

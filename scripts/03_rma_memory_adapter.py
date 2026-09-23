@@ -44,8 +44,15 @@ from memlayer.strategy import StageOutcome, StrategyMemory  # noqa: E402
 
 # harness stage name -> (pick primitive, place primitive) exactly as the training filenames spell them
 PRIMITIVES = {
+    # task 1
     "01_Place_Cookies_Basket": ("pick cookies", "place cookies into basket"),
     "02_Place_Tomato_Basket": ("pick tomato sauce", "place tomato into basket"),
+    # task 2
+    "01_Place_Butter_Basket": ("pick butter", "place butter into basket"),
+    "02_Place_Popcorn_Basket": ("pick popcorn", "place popcorn into basket"),
+    # task 3
+    "01_Place_Cream_Basket": ("pick cream", "place cream into basket"),
+    "02_Place_Pudding_Basket": ("pick pudding", "place pudding into basket"),
 }
 
 
