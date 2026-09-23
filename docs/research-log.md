@@ -885,3 +885,40 @@ basket`). Stage 2 fails 36/51 under the full prompt.
 `fixed` for ~3 episodes, then rise toward `primitive`. Also stage-2 success and steps per success.
 **Caveat.** Within-episode stage detection is given (Problem A); what is learned across episodes is
 *whether this stage needs help* (Problem B). Same seeds across arms → paired comparison.
+
+## Day 13c — 2026-09-23: X5 result — memory reaches the oracle planner after 3 episodes
+
+Same checkpoint (`t1/7999`), same 51 seeds (50–100), 2500-step budget, one L40. Figure:
+`docs/figures/x5_experience_curves.png`; raw: `docs/results/x5_*_task1.json` (+ per-episode prompt schedules).
+
+| arm | TSR | 95 % CI | CSR | paired vs fixed (won/lost) |
+|---|---|---|---|---|
+| fixed — full-task prompt, no memory | 15/51 = 29.4 % | 18.7–43.0 | 64.7 % | — |
+| primitive — training primitives every stage (oracle planner) | 30/51 = 58.8 % | 45.2–71.2 | 79.4 % | 22/7 |
+| memory, **stage-scope** switch (v1) | 10/51 = 19.6 % | 11.0–32.5 | 59.8 % | 6/11 |
+| memory, **episode-scope** switch (v3) | 30/51 = 58.8 % | 45.2–71.2 | 78.4 % | 22/7 |
+
+**What happened.** Both memory arms switch at episode 3, after `trouble:place@fixed` on `object:tomato_sauce`
+reaches 3 attempts with ≥50 % failure; every failure is stage 2. After the switch the episode-scope arm scores
+30/48 = 62.5 % versus the oracle's 29/48 on the same seeds — the memory layer *recovers the oracle planner's
+performance in 3 episodes without touching the policy*, and the experience curve shows it: flat at ~0.3 for
+three episodes, then up to ~0.6.
+
+**The negative result matters more.** The stage-scope arm (only the flagged stage switches to primitives) is
+*worse* than no memory (10/51). The memory identified the right stage at the right time, but the intervention
+did not transfer: the primitive demos for "pick tomato sauce" start from where the *primitive* "place cookies"
+left off, and the full-task prompt leaves the arm/scene elsewhere; frame sheets of the same seed show the hybrid
+dropping the sauce beside the basket where the pure-primitive run places it (`outputs/x5_frames/`). A gated
+grasp detector (v2, stopped at 14 episodes, 2/11 after switch) rules out the detector as the cause.
+Library lesson: **a stored fix has to be applied at the granularity the policy was trained at**; a per-stage
+fact is the right *evidence*, but the *action* on it is episode-level. `MemoryPromptAdapter(scope="episode")`
+encodes exactly that.
+
+**Caveats.** Within-episode stage progress is given by the harness's checks (Problem A oracle); what is learned
+is *whether this task needs the primitive strategy* (Problem B). 51 episodes, one task, one checkpoint: the
+oracle-vs-memory difference is 1 episode's worth of successes, i.e. noise; the fixed-vs-memory gap (22 won / 7
+lost by seed) is not. Strategy facts never get contradicted once the fixed prompt is abandoned (never-revise
+memory) — fine here, the known failure mode after a world change in X4.
+
+**Cost.** X5 total ≈ 2.9 GPU-hours ≈ $2.0 (incl. the resume wait and the abandoned v2). Pod stopped 19:08 UTC;
+volume kept (openpi env + data + checkpoint) for M3.
