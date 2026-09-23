@@ -49,10 +49,11 @@ def main():
         won = sum(1 for s in seeds if eps[s]["TSR"] > 0 and fixed[s]["TSR"] == 0)
         lost = sum(1 for s in seeds if eps[s]["TSR"] == 0 and fixed[s]["TSR"] > 0)
         print(f"{name:10s} {k:3d}/{n:<3d} {100*k/n:4.1f}% {100*lo:5.1f}–{100*hi:4.1f}% {csr:5.1f}% {s2:3d}/{n:<3d} {auc:5.2f}  {won:2d}/{lost:<2d}")
-        ax.plot(range(n), running(succ), label=f"{label}  ({k}/{n})", lw=2)
+        w = 10
+        ax.plot(range(w - 1, n), running(succ, w)[w - 1:], label=f"{label}  ({k}/{n})", lw=2)
     ax.set_xlabel("episode index (same seeds in every arm)"); ax.set_ylabel("task success, running mean of 10")
     ax.set_ylim(0, 1); ax.grid(alpha=.3); ax.legend(fontsize=8, loc="lower right")
-    ax.set_title("X5 — fine-tuned π₀.₅ on RoboMemArena task 1: what the prompt policy learns across episodes")
+    ax.set_title("X5 — fine-tuned π₀.₅, RoboMemArena task 1, 51 episodes per arm", fontsize=11)
     out = Path("docs/figures/x5_experience_curves.png"); out.parent.mkdir(parents=True, exist_ok=True)
     fig.tight_layout(); fig.savefig(out, dpi=150); print("wrote", out)
 
