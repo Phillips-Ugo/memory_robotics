@@ -1,5 +1,24 @@
 # Research log
 
+## 2026-09-22 — Day 12: M2b pipeline runs end to end; π₀.₅ + LoRA fits on 48 GB
+
+After four failed pods (container disk filled by caches, a gcsfs stall that corrupted
+the checkpoint, a host whose driver could not `cuInit`, web-terminal pastes that
+truncated), the whole thing now runs from this Mac: `scripts/runpod_orchestrate.py`
+creates the pod via the RunPod API, SSHes in, runs a GPU check and terminates +
+retries on a bad host, then runs `scripts/m2b_pipeline.sh` unattended.
+
+**Result:** L40 (48 GB, driver 570). Checkpoint verified (16 files), task-1 data
+(400 subtask episodes, 73,804 frames) converted to LeRobot, `pi05_rma_lora` config
+registered (init `pi05_libero`, batch 16), norm stats computed, **20-step smoke
+train passed** — loss 0.144 at step 0, checkpoint written (3.5 GB params). openpi's
+LoRA variants (`gemma_2b_lora` + `gemma_300m_lora`) work on π₀.₅ as hoped.
+Real 8k-step training launched next.
+
+**Lessons for the log (infra):** a cloud box's three disks are the first thing to
+map; never resume a download you cannot verify; test the GPU before spending a
+cent; and drive remote boxes from a script, not a browser terminal.
+
 ## 2026-09-11 — Day 11: Haiku reads the Phase 3 world (5 property types, 3 task kinds)
 
 `bench/run_llm.py --backend anthropic`, 10 worlds × 50 episodes, change at 25;
