@@ -857,3 +857,11 @@ command line — three "silent" launches were this. `runpodctl stop pod $RUNPOD_
 (no config, empty env) — the pod's autostop never actually worked; stop pods from the Mac via the API instead.
 The Mac slept 04:46–08:25 UTC and paused every local watcher (`caffeinate` next time). Pod is **stopped**, not
 terminated: the volume still holds `train_t1.log`, the 51 eval videos and checkpoints 2000/4000/6000/7999.
+
+**memlayer ingest of the eval (same day).** Feeding the 51 harness episodes through `memlayer.adapters.robomemarena`
++ `StageIngester` with defaults yields, after 51 episodes, `trouble:place` on `object:tomato_sauce` = True
+(evidence 30, last contradicted at ep 12) and `recall_text()` = "Trouble with 'place' on the tomato sauce: failed 30+
+times" — the memory layer recovers the policy's stage-2 weakness from outcomes alone, with no labels. Two false
+"slow" facts (`tomato_sauce`, `basket`) come from single long successes at ep 38/50; the slow-rule needs ≥3 samples
+before it speaks. Pod could not be resumed to pull the artifacts (RunPod balance too low); `scripts/runpod_fetch_run.sh`
+does resume → rsync (train log, eval videos, checkpoint 7999 params) → terminate once funds are added.
