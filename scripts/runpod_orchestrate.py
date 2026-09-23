@@ -150,7 +150,7 @@ def main() -> None:
     if action == "train":
         # keep the pod alive long enough: reset the auto-stop to 8 h
         ssh(ip, port, "pkill -f 'sleep 21600' ; (nohup sh -c 'sleep 28800; runpodctl stop pod $RUNPOD_POD_ID' > /dev/null 2>&1 < /dev/null &)")
-        cmd = (f"{ENV} && (XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 nohup uv run scripts/train.py pi05_rma_lora --exp-name t1 "
+        cmd = (f"{ENV} && (PYTHONUNBUFFERED=1 XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 nohup uv run scripts/train.py pi05_rma_lora --exp-name t1 "
                f"--overwrite --no-wandb-enabled > /workspace/train_t1.log 2>&1 < /dev/null &) ; sleep 5; pgrep -fc 'train.py pi05_rma_lora'")
         print("train procs:", ssh(ip, port, cmd)[1].strip())
         return
