@@ -109,11 +109,14 @@ class StageIngester:
                         mem._write(ent, attr, str(trouble), True, t)   # confirming observation
                 if st.passed and st.steps is not None:
                     base = self._costs.setdefault(key, [])
-                    if len(base) >= 3:
-                        m = median(base)
-                        if st.steps > self.slow_ratio * m:
+                    # compare the median of the last 3 successes (incl. this one) with the earlier
+                    # baseline, so one long outlier does not become a "slow" fact
+                    if len(base) >= 3 + 2:
+                        recent = median(base[-2:] + [st.steps])
+                        m = median(base[:-2])
+                        if recent > self.slow_ratio * m:
                             mem._write(ent, f"slow:{st.verb}", "True", True, t)
-                        elif st.steps < self.fast_ratio * m:
+                        elif recent < self.fast_ratio * m:
                             mem._write(ent, f"easy:{st.verb}", "True", True, t)
                         elif mem._fact(ent, f"slow:{st.verb}") or mem._fact(ent, f"easy:{st.verb}"):
                             mem._write(ent, f"slow:{st.verb}", "False", True, t)
@@ -133,8 +136,8 @@ class StageIngester:
             ent = f.entity.split(":", 1)[1].replace("_", " ")
             if kind == "trouble" and f.value == "True":
                 lines.append(f"Trouble with '{attr}' on the {ent}: failed {f.evidence}+ times (last {age} episode(s) ago).")
-            elif kind == "slow" and f.value == "True":
+            elif kind == "slow" and f.value == "True" and f.evidence >= 2:
                 lines.append(f"'{attr}' on the {ent} is unusually slow (last seen {age} episode(s) ago).")
-            elif kind == "easy" and f.value == "True":
+            elif kind == "easy" and f.value == "True" and f.evidence >= 2:
                 lines.append(f"'{attr}' on the {ent} is quick (last seen {age} episode(s) ago).")
         return "\n".join(lines)
