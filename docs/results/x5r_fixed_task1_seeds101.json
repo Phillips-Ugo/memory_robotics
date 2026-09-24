@@ -1,0 +1,743 @@
+{
+ "task_id": 1,
+ "task_key": "task1",
+ "prompt": "Pick and place cookies into the basket, then pick and place tomato sauce into the same basket.",
+ "bddl_path": "/workspace/memory_robotics/vendor/RoboMemArena/evaluation_benchmark/bddl/1_cookies_tomato_basket.bddl",
+ "video_dir": "/workspace/memory_robotics/outputs/x5r_fixed",
+ "TSR": 35.294117647058826,
+ "CSR": 67.6470588235294,
+ "episodes": [
+  {
+   "ep": 0,
+   "seed": 101,
+   "TSR": 0.0,
+   "CSR": 50.0,
+   "stage_done": {
+    "01_Place_Cookies_Basket": true,
+    "02_Place_Tomato_Basket": false
+   },
+   "stage_steps": {
+    "01_Place_Cookies_Basket": 263
+   },
+   "total_steps": 2510
+  },
+  {
+   "ep": 1,
+   "seed": 102,
+   "TSR": 0.0,
+   "CSR": 50.0,
+   "stage_done": {
+    "01_Place_Cookies_Basket": true,
+    "02_Place_Tomato_Basket": false
+   },
+   "stage_steps": {
+    "01_Place_Cookies_Basket": 267
+   },
+   "total_steps": 2510
+  },
+  {
+   "ep": 2,
+   "seed": 103,
+   "TSR": 0.0,
+   "CSR": 50.0,
+   "stage_done": {
+    "01_Place_Cookies_Basket": true,
+    "02_Place_Tomato_Basket": false
+   },
+   "stage_steps": {
+    "01_Place_Cookies_Basket": 258
+   },
+   "total_steps": 2510
+  },
+  {
+   "ep": 3,
+   "seed": 104,
+   "TSR": 0.0,
+   "CSR": 50.0,
+   "stage_done": {
+    "01_Place_Cookies_Basket": true,
+    "02_Place_Tomato_Basket": false
+   },
+   "stage_steps": {
+    "01_Place_Cookies_Basket": 241
+   },
+   "total_steps": 2510
+  },
+  {
+   "ep": 4,
+   "seed": 105,
+   "TSR": 100.0,
+   "CSR": 100.0,
+   "stage_done": {
+    "01_Place_Cookies_Basket": true,
+    "02_Place_Tomato_Basket": true
+   },
+   "stage_steps": {
+    "01_Place_Cookies_Basket": 239,
+    "02_Place_Tomato_Basket": 694
+   },
+   "total_steps": 894
+  },
+  {
+   "ep": 5,
+   "seed": 106,
+   "TSR": 0.0,
+   "CSR": 50.0,
+   "stage_done": {
+    "01_Place_Cookies_Basket": true,
+    "02_Place_Tomato_Basket": false
+   },
+   "stage_steps": {
+    "01_Place_Cookies_Basket": 274
+   },
+   "total_steps": 2510
+  },
+  {
+   "ep": 6,
+   "seed": 107,
+   "TSR": 0.0,
+   "CSR": 50.0,
+   "stage_done": {
+    "01_Place_Cookies_Basket": true,
+    "02_Place_Tomato_Basket": false
+   },
+   "stage_steps": {
+    "01_Place_Cookies_Basket": 254
+   },
+   "total_steps": 2510
+  },
+  {
+   "ep": 7,
+   "seed": 108,
+   "TSR": 100.0,
+   "CSR": 100.0,
+   "stage_done": {
+    "01_Place_Cookies_Basket": true,
+    "02_Place_Tomato_Basket": true
+   },
+   "stage_steps": {
+    "01_Place_Cookies_Basket": 281,
+    "02_Place_Tomato_Basket": 830
+   },
+   "total_steps": 1030
+  },
+  {
+   "ep": 8,
+   "seed": 109,
+   "TSR": 0.0,
+   "CSR": 50.0,
+   "stage_done": {
+    "01_Place_Cookies_Basket": true,
+    "02_Place_Tomato_Basket": false
+   },
+   "stage_steps": {
+    "01_Place_Cookies_Basket": 333
+   },
+   "total_steps": 2510
+  },
+  {
+   "ep": 9,
+   "seed": 110,
+   "TSR": 100.0,
+   "CSR": 100.0,
+   "stage_done": {
+    "01_Place_Cookies_Basket": true,
+    "02_Place_Tomato_Basket": true
+   },
+   "stage_steps": {
+    "01_Place_Cookies_Basket": 281,
+    "02_Place_Tomato_Basket": 706
+   },
+   "total_steps": 906
+  },
+  {
+   "ep": 10,
+   "seed": 111,
+   "TSR": 100.0,
+   "CSR": 100.0,
+   "stage_done": {
+    "01_Place_Cookies_Basket": true,
+    "02_Place_Tomato_Basket": true
+   },
+   "stage_steps": {
+    "01_Place_Cookies_Basket": 396,
+    "02_Place_Tomato_Basket": 825
+   },
+   "total_steps": 1025
+  },
+  {
+   "ep": 11,
+   "seed": 112,
+   "TSR": 100.0,
+   "CSR": 100.0,
+   "stage_done": {
+    "01_Place_Cookies_Basket": true,
+    "02_Place_Tomato_Basket": true
+   },
+   "stage_steps": {
+    "01_Place_Cookies_Basket": 321,
+    "02_Place_Tomato_Basket": 778
+   },
+   "total_steps": 978
+  },
+  {
+   "ep": 12,
+   "seed": 113,
+   "TSR": 100.0,
+   "CSR": 100.0,
+   "stage_done": {
+    "01_Place_Cookies_Basket": true,
+    "02_Place_Tomato_Basket": true
+   },
+   "stage_steps": {
+    "01_Place_Cookies_Basket": 333,
+    "02_Place_Tomato_Basket": 741
+   },
+   "total_steps": 941
+  },
+  {
+   "ep": 13,
+   "seed": 114,
+   "TSR": 100.0,
+   "CSR": 100.0,
+   "stage_done": {
+    "01_Place_Cookies_Basket": true,
+    "02_Place_Tomato_Basket": true
+   },
+   "stage_steps": {
+    "01_Place_Cookies_Basket": 240,
+    "02_Place_Tomato_Basket": 668
+   },
+   "total_steps": 868
+  },
+  {
+   "ep": 14,
+   "seed": 115,
+   "TSR": 100.0,
+   "CSR": 100.0,
+   "stage_done": {
+    "01_Place_Cookies_Basket": true,
+    "02_Place_Tomato_Basket": true
+   },
+   "stage_steps": {
+    "01_Place_Cookies_Basket": 381,
+    "02_Place_Tomato_Basket": 801
+   },
+   "total_steps": 1001
+  },
+  {
+   "ep": 15,
+   "seed": 116,
+   "TSR": 0.0,
+   "CSR": 50.0,
+   "stage_done": {
+    "01_Place_Cookies_Basket": true,
+    "02_Place_Tomato_Basket": false
+   },
+   "stage_steps": {
+    "01_Place_Cookies_Basket": 263
+   },
+   "total_steps": 2510
+  },
+  {
+   "ep": 16,
+   "seed": 117,
+   "TSR": 0.0,
+   "CSR": 50.0,
+   "stage_done": {
+    "01_Place_Cookies_Basket": true,
+    "02_Place_Tomato_Basket": false
+   },
+   "stage_steps": {
+    "01_Place_Cookies_Basket": 567
+   },
+   "total_steps": 2510
+  },
+  {
+   "ep": 17,
+   "seed": 118,
+   "TSR": 0.0,
+   "CSR": 50.0,
+   "stage_done": {
+    "01_Place_Cookies_Basket": true,
+    "02_Place_Tomato_Basket": false
+   },
+   "stage_steps": {
+    "01_Place_Cookies_Basket": 382
+   },
+   "total_steps": 2510
+  },
+  {
+   "ep": 18,
+   "seed": 119,
+   "TSR": 0.0,
+   "CSR": 50.0,
+   "stage_done": {
+    "01_Place_Cookies_Basket": true,
+    "02_Place_Tomato_Basket": false
+   },
+   "stage_steps": {
+    "01_Place_Cookies_Basket": 299
+   },
+   "total_steps": 2510
+  },
+  {
+   "ep": 19,
+   "seed": 120,
+   "TSR": 0.0,
+   "CSR": 50.0,
+   "stage_done": {
+    "01_Place_Cookies_Basket": true,
+    "02_Place_Tomato_Basket": false
+   },
+   "stage_steps": {
+    "01_Place_Cookies_Basket": 249
+   },
+   "total_steps": 2510
+  },
+  {
+   "ep": 20,
+   "seed": 121,
+   "TSR": 0.0,
+   "CSR": 50.0,
+   "stage_done": {
+    "01_Place_Cookies_Basket": true,
+    "02_Place_Tomato_Basket": false
+   },
+   "stage_steps": {
+    "01_Place_Cookies_Basket": 250
+   },
+   "total_steps": 2510
+  },
+  {
+   "ep": 21,
+   "seed": 122,
+   "TSR": 100.0,
+   "CSR": 100.0,
+   "stage_done": {
+    "01_Place_Cookies_Basket": true,
+    "02_Place_Tomato_Basket": true
+   },
+   "stage_steps": {
+    "01_Place_Cookies_Basket": 289,
+    "02_Place_Tomato_Basket": 742
+   },
+   "total_steps": 942
+  },
+  {
+   "ep": 22,
+   "seed": 123,
+   "TSR": 0.0,
+   "CSR": 50.0,
+   "stage_done": {
+    "01_Place_Cookies_Basket": true,
+    "02_Place_Tomato_Basket": false
+   },
+   "stage_steps": {
+    "01_Place_Cookies_Basket": 310
+   },
+   "total_steps": 2510
+  },
+  {
+   "ep": 23,
+   "seed": 124,
+   "TSR": 100.0,
+   "CSR": 100.0,
+   "stage_done": {
+    "01_Place_Cookies_Basket": true,
+    "02_Place_Tomato_Basket": true
+   },
+   "stage_steps": {
+    "01_Place_Cookies_Basket": 310,
+    "02_Place_Tomato_Basket": 753
+   },
+   "total_steps": 953
+  },
+  {
+   "ep": 24,
+   "seed": 125,
+   "TSR": 0.0,
+   "CSR": 50.0,
+   "stage_done": {
+    "01_Place_Cookies_Basket": true,
+    "02_Place_Tomato_Basket": false
+   },
+   "stage_steps": {
+    "01_Place_Cookies_Basket": 341
+   },
+   "total_steps": 2510
+  },
+  {
+   "ep": 25,
+   "seed": 126,
+   "TSR": 100.0,
+   "CSR": 100.0,
+   "stage_done": {
+    "01_Place_Cookies_Basket": true,
+    "02_Place_Tomato_Basket": true
+   },
+   "stage_steps": {
+    "01_Place_Cookies_Basket": 398,
+    "02_Place_Tomato_Basket": 875
+   },
+   "total_steps": 1075
+  },
+  {
+   "ep": 26,
+   "seed": 127,
+   "TSR": 0.0,
+   "CSR": 50.0,
+   "stage_done": {
+    "01_Place_Cookies_Basket": true,
+    "02_Place_Tomato_Basket": false
+   },
+   "stage_steps": {
+    "01_Place_Cookies_Basket": 234
+   },
+   "total_steps": 2510
+  },
+  {
+   "ep": 27,
+   "seed": 128,
+   "TSR": 0.0,
+   "CSR": 50.0,
+   "stage_done": {
+    "01_Place_Cookies_Basket": true,
+    "02_Place_Tomato_Basket": false
+   },
+   "stage_steps": {
+    "01_Place_Cookies_Basket": 232
+   },
+   "total_steps": 2510
+  },
+  {
+   "ep": 28,
+   "seed": 129,
+   "TSR": 0.0,
+   "CSR": 50.0,
+   "stage_done": {
+    "01_Place_Cookies_Basket": true,
+    "02_Place_Tomato_Basket": false
+   },
+   "stage_steps": {
+    "01_Place_Cookies_Basket": 277
+   },
+   "total_steps": 2510
+  },
+  {
+   "ep": 29,
+   "seed": 130,
+   "TSR": 0.0,
+   "CSR": 50.0,
+   "stage_done": {
+    "01_Place_Cookies_Basket": true,
+    "02_Place_Tomato_Basket": false
+   },
+   "stage_steps": {
+    "01_Place_Cookies_Basket": 270
+   },
+   "total_steps": 2510
+  },
+  {
+   "ep": 30,
+   "seed": 131,
+   "TSR": 0.0,
+   "CSR": 50.0,
+   "stage_done": {
+    "01_Place_Cookies_Basket": true,
+    "02_Place_Tomato_Basket": false
+   },
+   "stage_steps": {
+    "01_Place_Cookies_Basket": 337
+   },
+   "total_steps": 2510
+  },
+  {
+   "ep": 31,
+   "seed": 132,
+   "TSR": 0.0,
+   "CSR": 50.0,
+   "stage_done": {
+    "01_Place_Cookies_Basket": true,
+    "02_Place_Tomato_Basket": false
+   },
+   "stage_steps": {
+    "01_Place_Cookies_Basket": 278
+   },
+   "total_steps": 2510
+  },
+  {
+   "ep": 32,
+   "seed": 133,
+   "TSR": 100.0,
+   "CSR": 100.0,
+   "stage_done": {
+    "01_Place_Cookies_Basket": true,
+    "02_Place_Tomato_Basket": true
+   },
+   "stage_steps": {
+    "01_Place_Cookies_Basket": 242,
+    "02_Place_Tomato_Basket": 745
+   },
+   "total_steps": 945
+  },
+  {
+   "ep": 33,
+   "seed": 134,
+   "TSR": 0.0,
+   "CSR": 50.0,
+   "stage_done": {
+    "01_Place_Cookies_Basket": true,
+    "02_Place_Tomato_Basket": false
+   },
+   "stage_steps": {
+    "01_Place_Cookies_Basket": 352
+   },
+   "total_steps": 2510
+  },
+  {
+   "ep": 34,
+   "seed": 135,
+   "TSR": 0.0,
+   "CSR": 50.0,
+   "stage_done": {
+    "01_Place_Cookies_Basket": true,
+    "02_Place_Tomato_Basket": false
+   },
+   "stage_steps": {
+    "01_Place_Cookies_Basket": 284
+   },
+   "total_steps": 2510
+  },
+  {
+   "ep": 35,
+   "seed": 136,
+   "TSR": 100.0,
+   "CSR": 100.0,
+   "stage_done": {
+    "01_Place_Cookies_Basket": true,
+    "02_Place_Tomato_Basket": true
+   },
+   "stage_steps": {
+    "01_Place_Cookies_Basket": 251,
+    "02_Place_Tomato_Basket": 703
+   },
+   "total_steps": 903
+  },
+  {
+   "ep": 36,
+   "seed": 137,
+   "TSR": 0.0,
+   "CSR": 50.0,
+   "stage_done": {
+    "01_Place_Cookies_Basket": true,
+    "02_Place_Tomato_Basket": false
+   },
+   "stage_steps": {
+    "01_Place_Cookies_Basket": 291
+   },
+   "total_steps": 2510
+  },
+  {
+   "ep": 37,
+   "seed": 138,
+   "TSR": 0.0,
+   "CSR": 50.0,
+   "stage_done": {
+    "01_Place_Cookies_Basket": true,
+    "02_Place_Tomato_Basket": false
+   },
+   "stage_steps": {
+    "01_Place_Cookies_Basket": 238
+   },
+   "total_steps": 2510
+  },
+  {
+   "ep": 38,
+   "seed": 139,
+   "TSR": 0.0,
+   "CSR": 50.0,
+   "stage_done": {
+    "01_Place_Cookies_Basket": true,
+    "02_Place_Tomato_Basket": false
+   },
+   "stage_steps": {
+    "01_Place_Cookies_Basket": 382
+   },
+   "total_steps": 2510
+  },
+  {
+   "ep": 39,
+   "seed": 140,
+   "TSR": 100.0,
+   "CSR": 100.0,
+   "stage_done": {
+    "01_Place_Cookies_Basket": true,
+    "02_Place_Tomato_Basket": true
+   },
+   "stage_steps": {
+    "01_Place_Cookies_Basket": 243,
+    "02_Place_Tomato_Basket": 723
+   },
+   "total_steps": 923
+  },
+  {
+   "ep": 40,
+   "seed": 141,
+   "TSR": 0.0,
+   "CSR": 50.0,
+   "stage_done": {
+    "01_Place_Cookies_Basket": true,
+    "02_Place_Tomato_Basket": false
+   },
+   "stage_steps": {
+    "01_Place_Cookies_Basket": 275
+   },
+   "total_steps": 2510
+  },
+  {
+   "ep": 41,
+   "seed": 142,
+   "TSR": 0.0,
+   "CSR": 50.0,
+   "stage_done": {
+    "01_Place_Cookies_Basket": true,
+    "02_Place_Tomato_Basket": false
+   },
+   "stage_steps": {
+    "01_Place_Cookies_Basket": 250
+   },
+   "total_steps": 2510
+  },
+  {
+   "ep": 42,
+   "seed": 143,
+   "TSR": 0.0,
+   "CSR": 50.0,
+   "stage_done": {
+    "01_Place_Cookies_Basket": true,
+    "02_Place_Tomato_Basket": false
+   },
+   "stage_steps": {
+    "01_Place_Cookies_Basket": 460
+   },
+   "total_steps": 2510
+  },
+  {
+   "ep": 43,
+   "seed": 144,
+   "TSR": 0.0,
+   "CSR": 50.0,
+   "stage_done": {
+    "01_Place_Cookies_Basket": true,
+    "02_Place_Tomato_Basket": false
+   },
+   "stage_steps": {
+    "01_Place_Cookies_Basket": 273
+   },
+   "total_steps": 2510
+  },
+  {
+   "ep": 44,
+   "seed": 145,
+   "TSR": 0.0,
+   "CSR": 50.0,
+   "stage_done": {
+    "01_Place_Cookies_Basket": true,
+    "02_Place_Tomato_Basket": false
+   },
+   "stage_steps": {
+    "01_Place_Cookies_Basket": 279
+   },
+   "total_steps": 2510
+  },
+  {
+   "ep": 45,
+   "seed": 146,
+   "TSR": 100.0,
+   "CSR": 100.0,
+   "stage_done": {
+    "01_Place_Cookies_Basket": true,
+    "02_Place_Tomato_Basket": true
+   },
+   "stage_steps": {
+    "01_Place_Cookies_Basket": 449,
+    "02_Place_Tomato_Basket": 920
+   },
+   "total_steps": 1120
+  },
+  {
+   "ep": 46,
+   "seed": 147,
+   "TSR": 0.0,
+   "CSR": 50.0,
+   "stage_done": {
+    "01_Place_Cookies_Basket": true,
+    "02_Place_Tomato_Basket": false
+   },
+   "stage_steps": {
+    "01_Place_Cookies_Basket": 340
+   },
+   "total_steps": 2510
+  },
+  {
+   "ep": 47,
+   "seed": 148,
+   "TSR": 100.0,
+   "CSR": 100.0,
+   "stage_done": {
+    "01_Place_Cookies_Basket": true,
+    "02_Place_Tomato_Basket": true
+   },
+   "stage_steps": {
+    "01_Place_Cookies_Basket": 458,
+    "02_Place_Tomato_Basket": 1083
+   },
+   "total_steps": 1283
+  },
+  {
+   "ep": 48,
+   "seed": 149,
+   "TSR": 100.0,
+   "CSR": 100.0,
+   "stage_done": {
+    "01_Place_Cookies_Basket": true,
+    "02_Place_Tomato_Basket": true
+   },
+   "stage_steps": {
+    "01_Place_Cookies_Basket": 272,
+    "02_Place_Tomato_Basket": 686
+   },
+   "total_steps": 886
+  },
+  {
+   "ep": 49,
+   "seed": 150,
+   "TSR": 100.0,
+   "CSR": 100.0,
+   "stage_done": {
+    "01_Place_Cookies_Basket": true,
+    "02_Place_Tomato_Basket": true
+   },
+   "stage_steps": {
+    "01_Place_Cookies_Basket": 255,
+    "02_Place_Tomato_Basket": 662
+   },
+   "total_steps": 862
+  },
+  {
+   "ep": 50,
+   "seed": 151,
+   "TSR": 0.0,
+   "CSR": 50.0,
+   "stage_done": {
+    "01_Place_Cookies_Basket": true,
+    "02_Place_Tomato_Basket": false
+   },
+   "stage_steps": {
+    "01_Place_Cookies_Basket": 243
+   },
+   "total_steps": 2510
+  }
+ ]
+}

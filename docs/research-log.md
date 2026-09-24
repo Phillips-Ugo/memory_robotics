@@ -922,3 +922,30 @@ memory) — fine here, the known failure mode after a world change in X4.
 
 **Cost.** X5 total ≈ 2.9 GPU-hours ≈ $2.0 (incl. the resume wait and the abandoned v2). Pod stopped 19:08 UTC;
 volume kept (openpi env + data + checkpoint) for M3.
+
+## Day 14 — 2026-09-24: X5 replicates on fresh seeds; pooled 102 episodes per arm
+
+Fresh pod (RTX A6000 secure, $0.53/h), the task-1 checkpoint uploaded from the Mac (no retraining),
+same protocol on **new seeds 101–151**. Figure `docs/figures/x5_experience_curves_replicate.png`; raw
+`docs/results/x5r_*`.
+
+| arm | seeds 50–100 | seeds 101–151 | **pooled (n=102)** | pooled 95 % CI |
+|---|---|---|---|---|
+| fixed prompt, no memory | 15/51 | 18/51 | **33/102 = 32.4 %** | 24.1–41.9 |
+| primitives every stage (oracle) | 30/51 | 28/51 | **58/102 = 56.9 %** | 47.2–66.1 |
+| memory, episode scope | 30/51 | 26/51 | **56/102 = 54.9 %** | 45.2–64.2 |
+
+Memory switched at episode 3 (first run) and 4 (replicate: the fixed prompt happened to succeed on
+seeds 102–103, so the trouble fact needed one more failure). After the switch: 24/47 vs the oracle's
+27/47 on the same episodes. Paired by seed vs fixed on the new seeds: memory 16 won / 8 lost.
+
+**Claim we can now make.** On this policy and task, memlayer's strategy layer lifts task success from
+~32 % to ~55 % (non-overlapping CIs over 102 paired episodes), reaching the oracle planner within 3–4
+episodes, with no change to the policy weights. It costs one SQLite file and one fact.
+
+**Also this session.** memlayer L5 `strategy.py` (the X5 logic as a library layer; adapter now uses it).
+Task 2 (butter + popcorn → basket) downloaded (26 GB), converted (`belu/rma_task2`), config
+`pi05_rma_lora_t2` patched, norm stats computed — a task-2 LoRA is one command on this pod's volume.
+`scripts/eval_task_n.py` evaluates any task id. Videos of the winning arm exist this time:
+`docs/figures/x5_memory_before_after.mp4`. Pod **stopped** (volume kept: env, checkpoint, task-2 data).
+Cost: ≈ $2.1 for the replicate session.

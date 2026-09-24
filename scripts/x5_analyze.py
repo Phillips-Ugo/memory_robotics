@@ -13,7 +13,12 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-ARMS = [("fixed", "outputs/rma_pi05_ft_task1/results.json", "full-task prompt (no memory)"),
+import sys
+REPL = "--replicate" in sys.argv
+ARMS = [("fixed", "outputs/x5r_fixed/results.json", "full-task prompt (no memory)"),
+        ("primitive", "outputs/x5r_primitive/results.json", "primitive prompts every stage (oracle planner)"),
+        ("memory", "outputs/x5r_memory/results.json", "memory, episode-scope switch")] if REPL else [
+        ("fixed", "outputs/rma_pi05_ft_task1/results.json", "full-task prompt (no memory)"),
         ("primitive", "outputs/x5_primitive/results.json", "primitive prompts every stage (oracle planner)"),
         ("memory", "outputs/x5_memory/results.json", "memory, stage-scope switch (v1)"),
         ("memory_v3", "outputs/x5_memory_v3/results.json", "memory, episode-scope switch")]
@@ -53,8 +58,8 @@ def main():
         ax.plot(range(w - 1, n), running(succ, w)[w - 1:], label=f"{label}  ({k}/{n})", lw=2)
     ax.set_xlabel("episode index (same seeds in every arm)"); ax.set_ylabel("task success, running mean of 10")
     ax.set_ylim(0, 1); ax.grid(alpha=.3); ax.legend(fontsize=8, loc="lower right")
-    ax.set_title("X5 — fine-tuned π₀.₅, RoboMemArena task 1, 51 episodes per arm", fontsize=11)
-    out = Path("docs/figures/x5_experience_curves.png"); out.parent.mkdir(parents=True, exist_ok=True)
+    ax.set_title("X5 — fine-tuned π₀.₅, RoboMemArena task 1, 51 episodes per arm" + (" (replicate, seeds 101–151)" if REPL else " (seeds 50–100)"), fontsize=11)
+    out = Path("docs/figures/x5_experience_curves_replicate.png" if REPL else "docs/figures/x5_experience_curves.png"); out.parent.mkdir(parents=True, exist_ok=True)
     fig.tight_layout(); fig.savefig(out, dpi=150); print("wrote", out)
 
 
