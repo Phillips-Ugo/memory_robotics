@@ -25,9 +25,17 @@ def frames(path, every=1):
     return [f for i, f in enumerate(iio.imiter(path)) if i % every == 0]
 
 
-def label(frame, title, sub, ok=None, t=None, stages=None):
+def label(frame, title, sub, ok=None, t=None, stages=None, minimal=False):
     im = Image.fromarray(frame).resize((384, 384), Image.BILINEAR)
     d = ImageDraw.Draw(im, "RGBA")
+    if minimal:  # one small word per panel, and the outcome only on the last frame
+        w = d.textlength(title, font=FONT) + 16
+        d.rectangle([0, 0, w, 26], fill=(20, 24, 30, 170))
+        d.text((8, 4), title, font=FONT, fill=(255, 255, 255))
+        if ok is not None:
+            d.rectangle([384 - 90, 0, 384, 26], fill=(40, 140, 80, 230) if ok else (170, 50, 40, 230))
+            d.text((384 - 82, 4), "success" if ok else "failed", font=FONT, fill=(255, 255, 255))
+        return np.asarray(im)
     d.rectangle([0, 0, 384, 44], fill=(20, 24, 30, 200))
     d.text((8, 4), title, font=FONT, fill=(255, 255, 255))
     d.text((8, 24), sub, font=FONT_S, fill=(200, 210, 220))
@@ -46,7 +54,7 @@ def label(frame, title, sub, ok=None, t=None, stages=None):
     return np.asarray(im)
 
 
-def tile(clips, cols, speed, titles, subs, oks, stage_list, out, fps=10):
+def tile(clips, cols, speed, titles, subs, oks, stage_list, out, fps=10, minimal=False):
     n = max(len(c) for c in clips)
     rows = (len(clips) + cols - 1) // cols
     writer = iio.imopen(out, "w", plugin="pyav")
@@ -56,7 +64,7 @@ def tile(clips, cols, speed, titles, subs, oks, stage_list, out, fps=10):
         for c, ti, su, ok, st in zip(clips, titles, subs, oks, stage_list):
             j = min(i, len(c) - 1)
             done = j == len(c) - 1
-            panels.append(label(c[j], ti, su, ok if done else None, t=j, stages=st))
+            panels.append(label(c[j], ti, su, ok if done else None, t=j, stages=st, minimal=minimal))
         while len(panels) < rows * cols:
             panels.append(np.zeros_like(panels[0]))
         grid = np.vstack([np.hstack(panels[r * cols:(r + 1) * cols]) for r in range(rows)])
