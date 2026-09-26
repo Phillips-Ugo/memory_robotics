@@ -156,27 +156,46 @@ failure-only memory is best with 3 drawers and worst with 10. All in the log.
 github.com/Phillips-Ugo/memory_robotics
 
 
-# Post #4 — "$5 beat the paper's number. Every failure was a memory failure." (drafted 2026-09-23; refine in your voice)
+# Post #4 — "The robot got 2x better. I never touched the weights." (revised 2026-09-25 with the pooled result; post as a thread)
 
-Attach: one eval video where the robot places the cookies then stalls on the tomato sauce
-(outputs/rma_pi05_ft_task1/, a TSR=0 episode) next to one full success.
+Media plan (X does not mix video and images in one post; put the image in the first reply):
+  tweet 1: docs/figures/x5_memory_before_after.mp4   (hero — the same robot before/after the memory kicks in)
+  tweet 2: docs/figures/x5_experience_curves_replicate.png  (the curve + numbers)
+  tweet 3: docs/figures/x5_seed55_three_way.mp4      (the negative result — the middle panel drops the can)
+  tweet 4: text only + repo link
 
-I fine-tuned π₀.₅ on one RoboMemArena task for $5 on a rented L40 (LoRA, 8k steps, 6.5 hours).
+--- tweet 1 ---
+I fine-tuned π₀.₅ on one RoboMemArena task for $5. Then I gave it a memory.
 
-The paper's π₀.₅ baseline on this task category: 20% task success.
-Mine: 15/51 = 29% (95% CI 19–43%, so "same range", not "better").
+Same weights. Same task. Task success went from 32% to 55% — and it got there in 3 episodes.
 
-Not a reproduction. Their recipe is a full fine-tune on all tasks with 4×H100. Mine is a
-single-task specialist with ~5% of the compute. The interesting part is not the number.
+Top row: before the memory has learned anything. Bottom row: after.
 
-It is where the 36 failures are. Stage 1 (put cookies in basket): 51/51. Stage 2 (put tomato
-sauce in basket): 15/51. The policy finishes the first thing, then re-grabs the cookies or
-freezes. It does not know it is done. That is a memory failure, not a manipulation failure.
+--- tweet 2 ---
+The numbers. 102 episodes per arm, two seed sets, two GPUs, same checkpoint:
 
-Then I fed the 51 outcomes to the memory layer I have been building. Zero labels. After 51
-episodes it holds one sentence: "Trouble with 'place' on the tomato sauce: failed 30+ times."
+• fixed prompt, no memory: 33/102 (32%)
+• memory deciding how to run each episode: 56/102 (55%)
+• oracle planner (always the right prompts): 58/102 (57%)
 
-Next: let the memory change what the robot is told. Same policy, same task, 51 more episodes,
-and the memory decides per stage whether the robot needs a hint. Results next week.
+The memory reaches the oracle after 3–4 failures. Confidence intervals of the first two don't overlap.
 
-Code, logs, live training dashboard: github.com/Phillips-Ugo/memory_robotics
+--- tweet 3 ---
+What the memory actually learned: every failure was stage 2. The policy would put the cookies in the basket, then re-grab the cookies or freeze. It didn't know it was done.
+
+After 3 of those, the memory holds one fact — "trouble placing tomato sauce under the full prompt" — and switches the robot to the primitives it was trained on.
+
+--- tweet 4 ---
+The negative result taught me more. My first version switched only the failing stage. It scored 10/51 — worse than no memory.
+
+Middle panel: it grabs the sauce and drops it beside the basket. The primitive for "pick sauce" only works from where the primitive "place cookies" leaves the arm.
+
+A stored fix has to match the granularity the policy was trained at.
+
+--- tweet 5 ---
+Caveats, because they matter:
+• one task, one checkpoint, 8k-step LoRA on a single L40
+• within-episode stage detection comes from the benchmark's checks; what's learned across episodes is *whether this task needs help*
+• the paper's π₀.₅ scored 20% here with a different recipe — a reference, not a matched comparison
+
+Code, logs, videos: github.com/Phillips-Ugo/memory_robotics
