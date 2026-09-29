@@ -23,10 +23,20 @@ from sklearn.neural_network import MLPClassifier
 from sklearn.preprocessing import StandardScaler
 
 
-def load(out: Path, feat: str):
+def load(out: Path, feat: str, window: int = 1):
+    """feat may be a comma list (concatenated); window>1 stacks the previous sampled frames of the same episode."""
     rows = [json.loads(l) for l in (out / "index.jsonl").read_text().splitlines()]
-    F = np.load(out / f"features_{feat}.npy")
+    F = np.concatenate([np.load(out / f"features_{f}.npy") for f in feat.split(",")], axis=1)
     assert len(rows) == len(F), (len(rows), F.shape)
+    if window > 1:
+        prev = {}
+        stacked = np.zeros((len(F), F.shape[1] * window), dtype=F.dtype)
+        for i, r in enumerate(rows):
+            key = (r["src"], r["ep"]); hist = prev.setdefault(key, [])
+            hist.append(F[i]); hist[:] = hist[-window:]
+            pad = [hist[0]] * (window - len(hist)) + hist
+            stacked[i] = np.concatenate(pad)
+        F = stacked
     return rows, F
 
 
@@ -88,13 +98,15 @@ def main():
     ap.add_argument("--features", default="dinov2_vits14")
     ap.add_argument("--out", default="outputs/jev_frames")
     ap.add_argument("--model", default="linear", choices=["linear", "mlp"])
+    ap.add_argument("--window", type=int, default=1, help="stack the last N sampled frames (temporal context)")
     args = ap.parse_args()
-    rows, F = load(Path(args.out), args.features)
+    rows, F = load(Path(args.out), args.features, args.window)
     seedset = np.array([r["seedset"] for r in rows]); strat = np.array([r["strategy"] for r in rows])
     results = {}
     results["seedset_A_to_B"] = run_split(rows, F, "seed set A -> B (new seeds, all strategies)", seedset == "A", seedset == "B", args.model)
     results["fixed_to_primitive_memory"] = run_split(rows, F, "fixed-prompt episodes -> primitive + memory episodes", strat == "fixed", strat != "fixed", args.model)
-    Path(args.out, f"results_{args.features}_{args.model}.json").write_text(json.dumps(results, indent=1))
+    tag = args.features.replace(",", "+") + f"_{args.model}_w{args.window}"
+    Path(args.out, f"results_{tag}.json").write_text(json.dumps(results, indent=1))
 
 
 if __name__ == "__main__":

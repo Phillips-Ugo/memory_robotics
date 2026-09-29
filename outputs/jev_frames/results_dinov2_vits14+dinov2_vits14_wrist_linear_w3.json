@@ -1,0 +1,52 @@
+{
+ "seedset_A_to_B": {
+  "stage_done_1": {
+   "acc": 0.9952533854530224,
+   "auroc": 0.9997802004806626,
+   "episodes": 153,
+   "with_stage": 153,
+   "median_delay_steps": 0.0,
+   "p90_delay_steps": 0.0,
+   "missed": 0,
+   "false_triggers": 23
+  },
+  "stage_done_2": {
+   "acc": 0.9736842105263158,
+   "auroc": 0.9478779531497542,
+   "episodes": 153,
+   "with_stage": 72,
+   "median_delay_steps": 10.0,
+   "p90_delay_steps": 40.0,
+   "missed": 6,
+   "false_triggers": 8
+  },
+  "current_stage": {
+   "acc": 0.9707524780120061
+  }
+ },
+ "fixed_to_primitive_memory": {
+  "stage_done_1": {
+   "acc": 0.9950553584865097,
+   "auroc": 0.9998299964258582,
+   "episodes": 102,
+   "with_stage": 102,
+   "median_delay_steps": -10.0,
+   "p90_delay_steps": 0.0,
+   "missed": 0,
+   "false_triggers": 9
+  },
+  "stage_done_2": {
+   "acc": 0.9656024938191982,
+   "auroc": 0.9536126749252962,
+   "episodes": 102,
+   "with_stage": 54,
+   "median_delay_steps": 0.0,
+   "p90_delay_steps": 20.0,
+   "missed": 6,
+   "false_triggers": 11
+  },
+  "current_stage": {
+   "acc": 0.9537783510695474
+  }
+ }
+}

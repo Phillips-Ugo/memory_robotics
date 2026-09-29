@@ -1,0 +1,52 @@
+{
+ "seedset_A_to_B": {
+  "stage_done_1": {
+   "acc": 0.9759877146447019,
+   "auroc": 0.991838675844277,
+   "episodes": 153,
+   "with_stage": 153,
+   "median_delay_steps": 0.0,
+   "p90_delay_steps": 10.0,
+   "missed": 0,
+   "false_triggers": 93
+  },
+  "stage_done_2": {
+   "acc": 0.9738587184140723,
+   "auroc": 0.9495819476088981,
+   "episodes": 153,
+   "with_stage": 72,
+   "median_delay_steps": 20.0,
+   "p90_delay_steps": 50.0,
+   "missed": 4,
+   "false_triggers": 4
+  },
+  "current_stage": {
+   "acc": 0.9504048582995951
+  }
+ },
+ "fixed_to_primitive_memory": {
+  "stage_done_1": {
+   "acc": 0.9700634204020209,
+   "auroc": 0.9885591981584971,
+   "episodes": 102,
+   "with_stage": 102,
+   "median_delay_steps": 0.0,
+   "p90_delay_steps": 8.000000000000007,
+   "missed": 0,
+   "false_triggers": 89
+  },
+  "stage_done_2": {
+   "acc": 0.9656024938191982,
+   "auroc": 0.9372226607241727,
+   "episodes": 102,
+   "with_stage": 54,
+   "median_delay_steps": 20.0,
+   "p90_delay_steps": 40.0,
+   "missed": 3,
+   "false_triggers": 7
+  },
+  "current_stage": {
+   "acc": 0.9303987960872837
+  }
+ }
+}
