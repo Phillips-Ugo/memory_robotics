@@ -78,7 +78,11 @@ class StageDetector:
 
 
 class JevRAdapter(_mem.MemoryPromptAdapter):
-    def __init__(self, detector: str = "learned", heads: str = str(_REPO_ROOT / "jev/heads_task1.npz"), every: int = 10, **kw) -> None:
+    def __init__(self, detector: str = "learned", heads: str = str(_REPO_ROOT / "jev/heads_task1.npz"), every: int = 1,
+                 steps_per_call: int = 10, **kw) -> None:
+        # NOTE: the harness calls infer_actions once per action chunk (replan_steps = 10 env steps), not per env step.
+        # `every` counts calls; the heads were trained on frames sampled every 10 env steps, so every=1 matches.
+        self.steps_per_call = int(steps_per_call)
         super().__init__(**kw)
         assert detector in ("learned", "oracle"), detector
         self.detector = detector
@@ -104,8 +108,9 @@ class JevRAdapter(_mem.MemoryPromptAdapter):
         if self.det and self._t % self.det.every == 0 and len(self._learned_done) < len(STAGES):
             fired = self.det.step(obs["observation/image"], obs["observation/wrist_image"], len(self._learned_done))
             if fired:
-                self._learned_done.append(fired); self._learned_events.append((fired, self._t))
-                super().on_stage_done(fired, self._t)
+                t_env = self._t * self.steps_per_call
+                self._learned_done.append(fired); self._learned_events.append((fired, t_env))
+                super().on_stage_done(fired, t_env)
         self._t += 1
         return super().infer_actions(obs, prompt, resize_size)
 
