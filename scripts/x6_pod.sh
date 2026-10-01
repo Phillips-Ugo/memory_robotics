@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 # X6 on a fresh pod: the learned stage detector (Jev-R v0) replaces the oracle inside the X5 memory loop.
 # Needs /workspace/ckpt/7999 uploaded (task-1 LoRA params+assets) — see scripts/x5_replicate_pod.sh for the upload wait.
-# Arms on NEW seeds (default 151–201): memory+oracle (reference), memory+learned, primitive+learned.
+# Arms on NEW seeds (default 151–201), one variable at a time, no memory layer involved:
+#   fixed             — full-task prompt, no judge (baseline)
+#   primitive_oracle  — primitive prompts switched by the simulator's ground-truth stage checks (upper bound)
+#   primitive_learned — primitive prompts switched by the 14 ms learned judge (the architecture test)
 # Launch+auto-stop in one step: this script stops the pod itself when done (RUNPOD_API_KEY must be in /workspace/token.sh).
 set -u
 export DEBIAN_FRONTEND=noninteractive
@@ -32,11 +35,10 @@ run_arm () {  # name, kwargs-json
     --adapter-kwargs "$2" --num-trials-per-task $TRIALS --seed $SEED --video-out-path $OUT 2>&1 | grep --line-buffered "Episode\|Final result\|Traceback\|Error"
   echo "[ARM $1 exit ${PIPESTATUS[0]} $(date -u +%H:%M)]"
 }
-run_arm memory_oracle  "{\"mode\": \"memory\", \"scope\": \"episode\", \"detector\": \"oracle\",  \"db\": \"/workspace/x6_memory_oracle.db\"}"
-run_arm memory_learned "{\"mode\": \"memory\", \"scope\": \"episode\", \"detector\": \"learned\", \"db\": \"/workspace/x6_memory_learned.db\"}"
 run_arm primitive_learned "{\"mode\": \"primitive\", \"detector\": \"learned\", \"db\": \"/workspace/x6_primitive_learned.db\"}"
+run_arm primitive_oracle  "{\"mode\": \"primitive\", \"detector\": \"oracle\",  \"db\": \"/workspace/x6_primitive_oracle.db\"}"
+run_arm fixed             "{\"mode\": \"fixed\",     \"detector\": \"oracle\",  \"db\": \"/workspace/x6_fixed.db\"}"
 echo "[X6 DONE $(date -u +%H:%M)]"
 # stop the pod from inside via the API (runpodctl has no config in a detached shell)
-vendor_py=/workspace/memory_robotics/vendor/openpi/.venv/bin/python
 cd /workspace/memory_robotics/vendor/openpi && uv pip install -q runpod >/dev/null 2>&1
 uv run python -c "import runpod,os; runpod.api_key=os.environ['RUNPOD_API_KEY']; runpod.stop_pod(os.environ['RUNPOD_POD_ID']); print('[POD STOP REQUESTED]')" || echo "[POD STOP FAILED — stop it from the Mac]"
