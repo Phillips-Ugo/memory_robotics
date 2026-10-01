@@ -985,3 +985,41 @@ per task (free when evaluating) or a task-conditioned head / light backbone fine
 
 **Next.** X6 = X5 with the learned detector in the loop (needs one GPU session, ~$3, and a RunPod top-up);
 DINOv2-B features (running); then the action-chunk chooser.
+
+## Day 16 — 2026-10-01: X6 — the learned judge replaces the oracle in the loop; RoboProcessBench numbers
+
+**X6 (closed loop, seeds 151–201, task-1 LoRA checkpoint, RTX 6000 Ada).** One variable: who says "subtask done".
+
+| arm | TSR | 95 % CI | CSR | paired vs fixed (won/lost) |
+|---|---|---|---|---|
+| fixed prompt, no judge | 16/51 = 31.4 % | 20–45 | 65.7 % | — |
+| primitives switched by the simulator's ground-truth checks (oracle) | 25/51 = 49.0 % | 36–62 | 73.5 % | — |
+| **primitives switched by the learned judge (DINOv2-S ×2 views + linear heads, 6.8 ms)** | **30/51 = 58.8 %** | 45–71 | 79.4 % | 21/7 |
+
+Judge vs truth over the 51 episodes: fired on 50/51 stage-1 and 30/31 stage-2 completions, median +44 / +28 env
+steps after the true event (the persistence rule, 5 and 3 consecutive samples at 1 sample per 10 steps), **0 early
+or false fires, 1 miss**. Learned beat oracle 14/9 by seed — within noise (same CI), so the claim is "matches", not
+"beats". Raw: `docs/results/x6_*`. Lesson from the first attempt: the harness calls the adapter once per 10-step
+action chunk, so the detector must sample every call, not every 10 calls (first run switched ~500 steps late).
+Pod stopped itself via the API at the end (launch+stop in one script); resumed 5 min to fetch files, then terminated.
+
+**RoboProcessBench, GM-100 source** (same SFT/eval split as the released baseline; our model selected on a 10 %
+episode-level validation split of SFT, eval scored once): `jev/rpb.py`, `jev/rpb_vlm.py`, `jev/rpb_chart.py`;
+figure `docs/figures/rpb_gm100_compare.png`.
+
+| family | ours (0.7 M head on frozen DINOv2-S + bge-small) | Qwen2.5-VL-7B LoRA (released preds) | Haiku 4.5 zero-shot | Sonnet 5 zero-shot | chance |
+|---|---|---|---|---|---|
+| T1 phase | 42.2 | 43.6 | 28.1 | 33.0 | 25 |
+| T5 progress | 39.4 | 38.7 | 32.1 | 33.0 | 33 |
+| T2 contact | 66.0 | 73.3 | 47.3 | 62.7 | 50 |
+| T6 motion state | 72.2 | 83.0 | 53.8 | 69.5 | 50 |
+| T3 motion direction | 60.5 | 100.0 | 23.4 | 27.5 | 25 |
+| T4 bimanual | 36.0 | 72.0 | 48.0 | 44.9 | 25 |
+| T9 temporal priority | 47.5 | 48.0 | 55.2 | 46.6 | 50 |
+| T8 temporal ordering | 14.8 | 14.2 | 20.1 | 20.1 | 17 |
+
+Zero-shot runs used the benchmark's own prompt template, 2,643 items, Message Batches (Haiku 13 unparsed, Sonnet 134
+unparsed at a 400-token cap — scored as wrong). Scorer 0.65 ms/item + ~7 ms/frame encoder on a laptop GPU.
+Reading: phase/progress at parity with the fine-tuned 7B and above frontier zero-shot; motion direction / bimanual
+need spatio-temporal detail that pooled frame features lose (frame deltas did not help). Qwen's 100 % on T3 looks
+like a text shortcut — to check. Fair π comparison = a head on π0.5's own features (SAFE-style), next GPU session.
