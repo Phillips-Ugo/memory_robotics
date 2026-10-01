@@ -949,3 +949,39 @@ Task 2 (butter + popcorn → basket) downloaded (26 GB), converted (`belu/rma_ta
 `scripts/eval_task_n.py` evaluates any task id. Videos of the winning arm exist this time:
 `docs/figures/x5_memory_before_after.mp4`. Pod **stopped** (volume kept: env, checkpoint, task-2 data).
 Cost: ≈ $2.1 for the replicate session.
+
+## Day 15 — 2026-09-29 → 10-01: "Jev-R" v0 — a 14 ms stage detector replaces the oracle
+
+**Why.** Jev (TypeSafe) showed that a *non-generative, typed, calibrated* decision model is what software needs
+most of the time. The same primitive is missing beside VLAs: X5's memory arm leaned on the harness's oracle stage
+checks. Research briefs: `docs/research/jev-brief.md`, `docs/research/fast-decision-models-survey.md`; design:
+`docs/jev-robot-design.md`. Closest prior work: RoboMonitor (Qwen3-VL-4B, 180–200 ms), SAFE, SparkVLA, CheckVLA.
+
+**v0 (Mac only, no GPU).** Frozen DINOv2-S per view (6.7 ms/frame on MPS), logistic heads, labels = the harness's
+own stage-completion steps on our 204 recorded task-1 episodes (39k frames at 1/10 steps). `jev/frames.py`,
+`jev/train_head.py`, `jev/export_head.py`, closed-loop adapter `scripts/04_rma_jevr_adapter.py` (13.6 ms per
+decision for two views on this laptop).
+
+Held-out: train seed set A (51 fixed-prompt episodes) → test seed set B (153 episodes, three prompting strategies):
+
+| head | stage 1 done | stage 2 done |
+|---|---|---|
+| agent view, linear, 1 frame | AUROC 0.996; p≥.95×5: delay 30/80 steps, missed 0/153, early 2 | AUROC 0.941; missed 25/72 |
+| + 3-frame window | 0.992; early 93 at p≥.5 | 0.950; missed 4/72, early 4 |
+| + wrist view, 3-frame window | **1.000; p≥.95×5: delay 0/10, missed 0, early 2** | **0.948; p≥.8×3: delay 10/40, missed 10/72, early 4** |
+| same, MLP head | 1.000; early 38 at p≥.5 | 0.945; missed 15, early 0 |
+
+Reading: stage 1 is solved at this scale; stage 2 (small can inside the basket, episode ends 200 steps later) sits
+at ~85 % timely recall with ~3 % early fires. Wrist view and temporal context were the two things that mattered.
+Persistence (k samples at 1/10 steps) sets the floor on delay: 5 samples ≈ 4.5 s; sample every 5 steps to halve it.
+
+**Demo supervision does not transfer yet.** Release-labelled frames from RoboMemArena's own subtask demos
+(`jev/demos.py`, 30 task-1 seeds, 11k frames) → tested on policy rollouts: stage 1 AUROC 0.989 but 46–122 early
+fires (demos release earlier/cleaner than the harness check); stage 2 AUROC 0.56. Multi-task (tasks 1–3 demos)
+and zero-shot (tasks 2–3 → task 1) linear probes fail (stage 1 fires on nearly every episode). Adding demos to
+rollouts helps slightly (stage 1 early 2 → 1). Conclusion for the design doc: with frozen generic features and a
+linear head, the policy's *own rollouts* are the supervision that works; scaling to 26 tasks needs either rollouts
+per task (free when evaluating) or a task-conditioned head / light backbone fine-tune — not more demos.
+
+**Next.** X6 = X5 with the learned detector in the loop (needs one GPU session, ~$3, and a RunPod top-up);
+DINOv2-B features (running); then the action-chunk chooser.

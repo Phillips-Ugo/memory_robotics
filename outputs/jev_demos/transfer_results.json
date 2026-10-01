@@ -1,0 +1,226 @@
+{
+ "rollouts_A": {
+  "stage_done_1": {
+   "auroc": 0.9995789886906004,
+   "0.5x3": {
+    "episodes": 153,
+    "with_stage": 153,
+    "median_delay_steps": 0.0,
+    "p90_delay_steps": 10.0,
+    "missed": 0,
+    "false_triggers": 32
+   },
+   "0.8x3": {
+    "episodes": 153,
+    "with_stage": 153,
+    "median_delay_steps": 0.0,
+    "p90_delay_steps": 10.0,
+    "missed": 0,
+    "false_triggers": 14
+   },
+   "0.95x5": {
+    "episodes": 153,
+    "with_stage": 153,
+    "median_delay_steps": 0.0,
+    "p90_delay_steps": 30.0,
+    "missed": 0,
+    "false_triggers": 5
+   }
+  },
+  "stage_done_2": {
+   "auroc": 0.9565807747194864,
+   "0.5x3": {
+    "episodes": 153,
+    "with_stage": 72,
+    "median_delay_steps": 20.0,
+    "p90_delay_steps": 70.0,
+    "missed": 19,
+    "false_triggers": 2
+   },
+   "0.8x3": {
+    "episodes": 153,
+    "with_stage": 72,
+    "median_delay_steps": 20.0,
+    "p90_delay_steps": 50.0,
+    "missed": 36,
+    "false_triggers": 0
+   },
+   "0.95x5": {
+    "episodes": 153,
+    "with_stage": 72,
+    "median_delay_steps": 30.0,
+    "p90_delay_steps": 90.0,
+    "missed": 57,
+    "false_triggers": 0
+   }
+  }
+ },
+ "demos_task1": {
+  "stage_done_1": {
+   "auroc": 0.9887638041430056,
+   "0.5x3": {
+    "episodes": 153,
+    "with_stage": 153,
+    "median_delay_steps": -10.0,
+    "p90_delay_steps": 0.0,
+    "missed": 0,
+    "false_triggers": 122
+   },
+   "0.8x3": {
+    "episodes": 153,
+    "with_stage": 153,
+    "median_delay_steps": -10.0,
+    "p90_delay_steps": 0.0,
+    "missed": 0,
+    "false_triggers": 90
+   },
+   "0.95x5": {
+    "episodes": 153,
+    "with_stage": 153,
+    "median_delay_steps": -10.0,
+    "p90_delay_steps": 10.0,
+    "missed": 0,
+    "false_triggers": 46
+   }
+  },
+  "stage_done_2": {
+   "auroc": 0.5562170794747415,
+   "0.5x3": {
+    "episodes": 153,
+    "with_stage": 72,
+    "median_delay_steps": 10.0,
+    "p90_delay_steps": 50.0,
+    "missed": 66,
+    "false_triggers": 22
+   },
+   "0.8x3": {
+    "episodes": 153,
+    "with_stage": 72,
+    "median_delay_steps": 20.0,
+    "p90_delay_steps": 20.0,
+    "missed": 70,
+    "false_triggers": 14
+   },
+   "0.95x5": {
+    "episodes": 153,
+    "with_stage": 72,
+    "median_delay_steps": null,
+    "p90_delay_steps": null,
+    "missed": 72,
+    "false_triggers": 2
+   }
+  }
+ },
+ "demos_tasks123": {
+  "stage_done_1": {
+   "auroc": 0.9797949228119733,
+   "0.5x3": {
+    "episodes": 153,
+    "with_stage": 153,
+    "median_delay_steps": null,
+    "p90_delay_steps": null,
+    "missed": 0,
+    "false_triggers": 153
+   },
+   "0.8x3": {
+    "episodes": 153,
+    "with_stage": 153,
+    "median_delay_steps": null,
+    "p90_delay_steps": null,
+    "missed": 0,
+    "false_triggers": 153
+   },
+   "0.95x5": {
+    "episodes": 153,
+    "with_stage": 153,
+    "median_delay_steps": -10.0,
+    "p90_delay_steps": -5.0,
+    "missed": 0,
+    "false_triggers": 147
+   }
+  },
+  "stage_done_2": {
+   "auroc": 0.8015910311218907,
+   "0.5x3": {
+    "episodes": 153,
+    "with_stage": 72,
+    "median_delay_steps": 15.0,
+    "p90_delay_steps": 30.0,
+    "missed": 58,
+    "false_triggers": 24
+   },
+   "0.8x3": {
+    "episodes": 153,
+    "with_stage": 72,
+    "median_delay_steps": 20.0,
+    "p90_delay_steps": 56.0,
+    "missed": 66,
+    "false_triggers": 19
+   },
+   "0.95x5": {
+    "episodes": 153,
+    "with_stage": 72,
+    "median_delay_steps": null,
+    "p90_delay_steps": null,
+    "missed": 72,
+    "false_triggers": 7
+   }
+  }
+ },
+ "demos_tasks23": {
+  "stage_done_1": {
+   "auroc": 0.6946689427394271,
+   "0.5x3": {
+    "episodes": 153,
+    "with_stage": 153,
+    "median_delay_steps": -10.0,
+    "p90_delay_steps": 20.0,
+    "missed": 0,
+    "false_triggers": 91
+   },
+   "0.8x3": {
+    "episodes": 153,
+    "with_stage": 153,
+    "median_delay_steps": -10.0,
+    "p90_delay_steps": 20.0,
+    "missed": 0,
+    "false_triggers": 35
+   },
+   "0.95x5": {
+    "episodes": 153,
+    "with_stage": 153,
+    "median_delay_steps": 275.0,
+    "p90_delay_steps": 713.0000000000002,
+    "missed": 18,
+    "false_triggers": 5
+   }
+  },
+  "stage_done_2": {
+   "auroc": 0.865648274045764,
+   "0.5x3": {
+    "episodes": 153,
+    "with_stage": 72,
+    "median_delay_steps": 0.0,
+    "p90_delay_steps": 32.0,
+    "missed": 68,
+    "false_triggers": 2
+   },
+   "0.8x3": {
+    "episodes": 153,
+    "with_stage": 72,
+    "median_delay_steps": null,
+    "p90_delay_steps": null,
+    "missed": 72,
+    "false_triggers": 1
+   },
+   "0.95x5": {
+    "episodes": 153,
+    "with_stage": 72,
+    "median_delay_steps": null,
+    "p90_delay_steps": null,
+    "missed": 72,
+    "false_triggers": 0
+   }
+  }
+ }
+}
