@@ -97,7 +97,7 @@ def read_frames(path: str, idxs: set[int]) -> dict[int, np.ndarray]:
     return out
 
 
-def run_rollouts(policy, root: str, every: int, prompt: str, out: str, batch: int) -> None:
+def run_rollouts(policy_loader, root: str, every: int, prompt: str, out: str, batch: int) -> None:
     S1, S2 = "01_Place_Cookies_Basket", "02_Place_Tomato_Basket"
     rows, imgs, wrs = [], [], []
     for src in sorted(glob.glob(f"{root}/*/results.json")):
@@ -115,6 +115,7 @@ def run_rollouts(policy, root: str, every: int, prompt: str, out: str, batch: in
                 rows.append({"src": d.name, "ep": e["ep"], "seed": e["seed"], "step": t, "stage_done_1": int(s1 is not None and t >= s1), "stage_done_2": int(s2 is not None and t >= s2)})
                 imgs.append(A[t]); wrs.append(W[t])
         print(f"  {d.name}: {len(rows)} frames so far", flush=True)
+    policy = policy_loader()
     F = []; t0 = time.time()
     for i in range(0, len(rows), batch):
         F.append(prefix_features(policy, np.stack(imgs[i:i + batch]), np.stack(wrs[i:i + batch]), np.zeros((len(imgs[i:i + batch]), 8), np.float32), [prompt] * len(imgs[i:i + batch])))
@@ -123,7 +124,7 @@ def run_rollouts(policy, root: str, every: int, prompt: str, out: str, batch: in
     np.savez(out, F=np.concatenate(F), rows=np.array([json.dumps(r) for r in rows])); print("wrote", out, np.concatenate(F).shape)
 
 
-def run_rpb(policy, rpb: str, gm: str, out: str, batch: int) -> None:
+def run_rpb(policy_loader, rpb: str, gm: str, out: str, batch: int) -> None:
     from collections import defaultdict
     rows = [json.loads(l) for f in ("eval", "sft") for l in open(f"{rpb}/splits/processdata_{f}.jsonl")]
     rows = [r for r in rows if r["source"] == "GM-100"]
@@ -141,6 +142,7 @@ def run_rpb(policy, rpb: str, gm: str, out: str, batch: int) -> None:
             keys.append((p, t)); imgs.append(f); prompts.append(qs[(p, t)])
         if k % 200 == 0:
             print(f"  frames: {k}/{len(want)} videos, {len(keys)} frames", flush=True)
+    policy = policy_loader()
     F = []; t0 = time.time()
     for i in range(0, len(keys), batch):
         im = np.stack([_resize(x) for x in imgs[i:i + batch]])
@@ -164,6 +166,6 @@ if __name__ == "__main__":
     ap.add_argument("--rpb", default="/workspace/data/RoboProcessBench"); ap.add_argument("--gm", default="/workspace/data/gm100")
     ap.add_argument("--out", required=True); ap.add_argument("--batch", type=int, default=16)
     a = ap.parse_args()
-    pol = load_policy(a.config, a.ckpt)
+    loader = lambda: load_policy(a.config, a.ckpt)  # JAX initialises only after all video decoding is done
     Path(a.out).parent.mkdir(parents=True, exist_ok=True)
-    (run_rollouts(pol, a.root, a.every, a.prompt, a.out, a.batch) if a.mode == "rollouts" else run_rpb(pol, a.rpb, a.gm, a.out, a.batch))
+    (run_rollouts(loader, a.root, a.every, a.prompt, a.out, a.batch) if a.mode == "rollouts" else run_rpb(loader, a.rpb, a.gm, a.out, a.batch))
