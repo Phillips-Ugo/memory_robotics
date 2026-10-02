@@ -1,64 +1,68 @@
-# The memory layer for robots
+# Memory and judgment for robot policies
 
-**A benchmark for cross-episode robot memory — does a robot learn from last week, and notice when a fact stops being true? — and the memory layer that passes it.** Built in public from zero robotics experience, starting 27 Aug 2026.
+Two things, built in public from zero robotics experience since 27 Aug 2026:
 
-<p align="center"><img src="docs/figures/fetch_side_by_side.gif" width="720" alt="Same kitchen, same task: no memory searches every drawer; with memory it goes straight to the right one"></p>
-<p align="center"><em>Same kitchen, same task ("bring the pudding to the table"). Left: no memory, searches three drawers, 1003 steps. Right: remembers where it was, 361 steps.</em></p>
+1. **Jev for Robotics** — a 23M-parameter *System-One judge* that sits beside a VLA policy and answers typed questions about the robot's situation (which phase, is this subtask done, how far along) from camera frames in **7 ms**, with calibrated probabilities and no text generation.
+2. **The memory layer** — a cross-episode memory benchmark ("kitchens with secrets": does the robot learn from last week, and notice when a fact stops being true?) and the library that passes it.
 
-## The idea
+Technical note on the judge, with the architecture, every table and the repro commands: [`docs/site/index.html`](docs/site/index.html). Everything is dated and costed in [`docs/research-log.md`](docs/research-log.md).
 
-Robot memory benchmarks test whether a policy remembers what happened *earlier in the same episode*. Deployment runs on a different question: does it remember *this drawer sticks*, *this box is heavy*, *the scissors live in the middle drawer* — and does it stop believing those things when they change?
+<p align="center"><img src="docs/figures/rpb_gm100_cards.png" width="900" alt="RoboProcessBench, GM-100 split: ours (23M) next to a fine-tuned 7B VLM and two zero-shot frontier models on phase, progress and contact"></p>
 
-So a world here is a **kitchen with secrets**: hidden, persistent properties no single task reveals for free. The robot does 30–50 tasks in it and can only learn the secrets by failing and remembering. Halfway through, the world quietly changes. **The score is the shape of the success curve across tasks**, plus how many actions were taken on beliefs that had stopped being true.
+## Jev for Robotics — results so far
 
-The benchmark ships a fixed, deliberately dumb planner. Entrants submit **only a memory module** behind two calls:
+| what | result | where |
+|---|---|---|
+| In the loop with π₀.₅ (51 new episodes, one variable: who says a subtask is done) | judge **30/51** · simulator ground truth 25/51 · nothing 16/51; judge had 0 early fires, 1 miss | Day 16, `docs/results/x6_*` |
+| RoboProcessBench, GM-100 split, same training/eval rows as the released baseline | phase 42.2 vs 43.6 (Qwen2.5-VL-7B fine-tuned), progress 39.4 vs 38.7; beats Claude Sonnet 5 / Haiku 4.5 zero-shot on both | Day 16, `docs/results/rpb_*` |
+| Latency | 6.8 ms per decision (two views, RTX 6000 Ada); RoboMonitor (4B VLM) 180–200 ms; π₀.₅ ~100 ms per action chunk | Day 16 |
+| Does the policy's own representation know? | π₀.₅ prefix features: stage-2 AUROC 0.74 vs 0.95 for the judge; benchmark 42.8 vs 45.6 overall → a separate judge is additive | Day 17 |
 
-```python
-memory.observe(episode)          # after each task
-beliefs = memory.recall(task)    # before each task   (or recall_text() for an LLM/VLA prompt)
-```
+Judge = frozen DINOv2-S on agent + wrist views, a 3-frame window, 0.7M of trained heads; labels come free from the benchmark's stage checks on recorded rollouts. Design doc: [`docs/jev-robot-design.md`](docs/jev-robot-design.md); research briefs in [`docs/research/`](docs/research/).
 
-<p align="center"><img src="docs/figures/bench_sim_p3big_curves_2026-09-06.png" width="900" alt="Four memories over 30 tasks in MuJoCo physics"></p>
-<p align="center"><em>MuJoCo/robosuite physics, 2,400 episodes: none 0.47 → last-5 0.83 → retrieval 0.86 → consolidated 0.86 AUC. Dashed line: the world changes.</em></p>
+## The memory layer — results so far
 
-## What I've found so far
+<p align="center"><img src="docs/figures/x5_experience_curves_replicate.png" width="760" alt="Experience curves: fixed prompt, oracle planner, and memory-driven prompting on the fine-tuned pi0.5"></p>
 
 | # | finding | where |
 |---|---|---|
-| 1 | Any memory beats none by ~40 points within three tasks — abstract sim, physics, and with a language model reading the memory | log Days 4b, 10, 11 |
-| 2 | A memory that never forgets is optimal while the world is static and the only kind that gets *worse* when it changes (LLM reader: 96% → 73%) | Days 7b, 11 |
-| 3 | Failures are the information-dense episodes — with few options. With many, one confirming success outweighs any number of eliminations | Days 7c, 9c |
-| 4 | Revision pays only when P(change) × cost(stale) > cost(probe). A success-only leaderboard rewards never revising; revision policy must be per fact type | Day 9e |
-| 5 | Similarity retrieval loses to entity keys; interference only bites when entity count exceeds the memory's horizon | Days 9g, 9h |
-| 6 | Physics teaches what abstraction cannot: close drawers behind you; handles above block lifts; a brushed wall against a sticky drawer breaks a light grip; fixed defaults leak information | Days 6, 9d |
+| 1 | On a real VLA (π₀.₅ LoRA on RoboMemArena task 1), a one-fact memory lifts task success from 33/102 to 56/102 over two seed sets, reaching the oracle planner within 3–4 episodes; the per-stage variant *loses* to no memory — interventions must match the policy's training granularity | Days 13c–14, `docs/results/x5*` |
+| 2 | A $5 LoRA of π₀.₅ scores 15/51 TSR on task 1 (paper baseline 20.0 % with a different recipe; stock checkpoint 0/51); every failure is stage 2 | Day 13 |
+| 3 | In the benchmark: any memory beats none by ~40 points within three tasks; a memory that never forgets is the only kind that gets *worse* when the world changes (LLM reader 96 → 73 %) | Days 4b, 7b, 10, 11 |
+| 4 | Revision pays only when P(change) × cost(stale) > cost(probe); entity-keyed retrieval beats similarity; failures are the information-dense episodes | Days 7c, 9e, 9g |
 
-Every number lives in [`docs/research-log.md`](docs/research-log.md), dated, with intervals — and with the bugs that produced the wrong numbers first. Leaderboard: [`docs/leaderboard.md`](docs/leaderboard.md).
+Entrants submit only a memory module behind two calls: `memory.observe(episode)` after each task, `memory.recall(task)` before. Leaderboard: [`docs/leaderboard.md`](docs/leaderboard.md).
 
 ## Run it
 
 ```bash
 uv sync
-uv run python -m bench.run                                   # four curves, abstract env, ~2 s
-uv run python -m bench.evaluate --baselines                  # leaderboard
-uv run python -m bench.evaluate --memory memlayer:MemoryLayer --name mine   # submit a memory
-bash scripts/setup_rma_env.sh                                # physics env (macOS; Linux: setup_gpu_box.sh)
-MUJOCO_GL=glfw vendor/rma-venv/bin/python -m bench.sim.run --properties sticky,heavy,location,fast --kinds put,put_any,fetch --calib-log outputs/sim_calibrate4.log
+# judge
+uv run python -m jev.frames --every 10 --features dinov2_vits14            # stage labels + features from recordings
+uv run python -m jev.train_head --features dinov2_vits14,dinov2_vits14_wrist --window 3
+uv run python -m jev.rpb build && uv run python -m jev.rpb train             # RoboProcessBench (needs GM-100 videos)
+# memory benchmark
+uv run python -m bench.run                                                   # four curves, abstract env, ~2 s
+uv run python -m bench.evaluate --memory memlayer:MemoryLayer --name mine    # submit a memory
+# GPU runs (RunPod, driven from the laptop)
+uv run python scripts/runpod_orchestrate.py check                            # provision + GPU check
+bash scripts/x6_pod.sh                                                       # judge in the loop (see script header)
 ```
 
 ## Layout
 
 | path | what |
 |---|---|
-| `bench/` | abstract env, worlds and hidden properties, planner, baselines, runners (`run`, `run_llm`, `run_x3`, `evaluate`, `headroom`) |
-| `bench/sim/` | the same benchmark on robosuite/LIBERO physics |
-| `memlayer/` | the library: SQLite fact store, per-fact-type revision policy, free-text `recall()`, stage-log ingestion + a RoboMemArena adapter |
-| `scripts/` | RoboMemArena/openpi harness adapters, GPU-box setup, π₀.₅ fine-tuning pipeline (Phase 1) |
-| `docs/` | roadmap, research log, benchmark design, library architecture, report draft, paper notes, posts, figures |
+| `jev/` | the judge: frame/label builders (`frames`, `demos`), heads (`train_head`, `export_head`), RoboProcessBench pipeline (`rpb`, `rpb_vlm`), π-feature comparison (`pi_compare`), charts |
+| `memlayer/` | the library: SQLite fact store, per-fact-type revision policy, free-text `recall()`, stage-log ingestion, strategy memory (L5), RoboMemArena adapter |
+| `bench/`, `bench/sim/` | the cross-episode benchmark in the abstract env and on robosuite/LIBERO physics |
+| `scripts/` | harness adapters (`02` π₀.₅, `03` memory, `04` judge), π₀.₅ fine-tune pipeline, feature extraction, RunPod orchestration and pod scripts |
+| `docs/` | research log, design docs, research briefs, results (`docs/results/`), figures, the technical-note site, posts |
 
 ## Status and honesty
 
-- Physics results separate memory from no memory cleanly; they do **not** separate raw retrieval from consolidated facts on success with the scripted planner — that gap shows in stale actions and with a language-model reader.
-- The planner is scripted with privileged state and grasps are magnetic (documented). A fine-tuned π₀.₅ on RoboMemArena is in progress as the first learned policy.
-- Simulation only so far; a small real-world replication (LeRobot SO-100, one kitchen world) is planned.
+- Judge: one task and one checkpoint in the loop; one benchmark source of four; frozen generic features; at chance on temporal ordering like every model on that benchmark; no calibration-aware training yet.
+- Memory: simulation only; the within-episode stage signal is now the judge, the cross-episode strategy is the memory.
+- Every table has raw results under `docs/results/`; wrong numbers and the bugs behind them stay in the log.
 
-Posts and progress: [@Phillips-Ugo](https://github.com/Phillips-Ugo). Questions, disagreements, and memory modules welcome — open an issue.
+Jev is TypeSafe AI's model; this project borrows its framing and is not affiliated. Questions, disagreements, and memory modules welcome — open an issue.
