@@ -30,28 +30,53 @@ def load_policy(config_name: str, ckpt: str):
     return policy_config.create_trained_policy(cfg, ckpt)
 
 
+_JIT = {}
+
+
+def _get_jit(policy, batch_size: int):
+    """A jitted prefix pass (embed_prefix + PaliGemma LLM) with fixed batch size, built once per policy."""
+    key = (id(policy), batch_size)
+    if key in _JIT:
+        return _JIT[key]
+    from flax import nnx
+    from openpi.models import model as _model
+    from openpi.models import pi0 as _pi0
+    model = policy._model
+    graphdef, state = nnx.split(model)
+
+    def f(state, inputs):
+        m = nnx.merge(graphdef, state)
+        obs = _model.Observation.from_dict(inputs)
+        tokens, mask, ar_mask = m.embed_prefix(obs)
+        attn = _pi0.make_attn_mask(mask, ar_mask)
+        positions = jnp.cumsum(mask, axis=1) - 1
+        (out, _), _ = m.PaliGemma.llm([tokens, None], mask=attn, positions=positions)
+        return out, mask
+
+    jf = jax.jit(f)
+    _JIT[key] = (jf, state)
+    return _JIT[key]
+
+
 def prefix_features(policy, images: np.ndarray, wrists: np.ndarray, states: np.ndarray, prompts: list[str]) -> np.ndarray:
     """images/wrists: (B,256,256,3) uint8, states (B,8). Returns (B, 2*D) [mean image tokens | mean language tokens]."""
-    from openpi.models import model as _model
-    model = policy._model
+    B = len(images); BS = 16
     batch = []
-    for i in range(len(images)):
+    for i in range(B):
         obs = {"observation/image": images[i], "observation/wrist_image": wrists[i], "observation/state": states[i].astype(np.float32), "prompt": prompts[i]}
         batch.append(policy._input_transform(obs))
-    inputs = {k: np.stack([b[k] for b in batch]) if not isinstance(batch[0][k], dict) else {kk: np.stack([b[k][kk] for b in batch]) for kk in batch[0][k]} for k in batch[0]}
-    obs_b = _model.Observation.from_dict(jax.tree.map(jnp.asarray, inputs))
-    tokens, mask, ar_mask = model.embed_prefix(obs_b)
-    attn = _make_attn(mask, ar_mask)
-    positions = jnp.cumsum(mask, axis=1) - 1
-    (out, _), _ = model.PaliGemma.llm([tokens, None], mask=attn, positions=positions)
+    while len(batch) < BS:  # pad to the jit batch size
+        batch.append(batch[-1])
+    inputs = {k: (np.stack([b[k] for b in batch]) if not isinstance(batch[0][k], dict) else {kk: np.stack([b[k][kk] for b in batch]) for kk in batch[0][k]}) for k in batch[0]}
+    jf, state = _get_jit(policy, BS)
+    out, mask = jf(state, jax.tree.map(jnp.asarray, inputs))
     out = np.asarray(out, dtype=np.float32); m = np.asarray(mask)
-    n_img = sum(int(np.prod(obs_b.images[k].shape[1:3])) // 196 for k in obs_b.images) if False else None
-    # image tokens come first in embed_prefix (per camera), language tokens last: split by the tokenized prompt length
-    n_lang = int(np.asarray(obs_b.tokenized_prompt_mask).sum(1).max()) if obs_b.tokenized_prompt is not None else 0
+    n_lang = int(np.asarray(inputs["tokenized_prompt_mask"]).sum(1).max()) if "tokenized_prompt_mask" in inputs else 0
     feats = []
-    for b in range(out.shape[0]):
+    for b in range(B):
         valid = out[b][m[b].astype(bool)]
-        img = valid[:-n_lang] if n_lang else valid; lang = valid[-n_lang:] if n_lang else valid[:0]
+        n_l = int(np.asarray(inputs["tokenized_prompt_mask"][b]).sum()) if n_lang else 0
+        img = valid[:-n_l] if n_l else valid; lang = valid[-n_l:] if n_l else valid[:0]
         feats.append(np.concatenate([img.mean(0), lang.mean(0) if len(lang) else np.zeros(img.shape[1], np.float32)]))
     return np.stack(feats)
 
