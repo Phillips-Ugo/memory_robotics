@@ -1,0 +1,40 @@
+{
+ "stage_done_1": {
+  "auroc": 0.9997282643378017,
+  "0.5x3": {
+   "episodes": 153,
+   "with_stage": 153,
+   "median_delay_steps": 0.0,
+   "p90_delay_steps": 0.0,
+   "missed": 0,
+   "false_triggers": 2
+  },
+  "0.95x5": {
+   "episodes": 153,
+   "with_stage": 153,
+   "median_delay_steps": 0.0,
+   "p90_delay_steps": 10.0,
+   "missed": 0,
+   "false_triggers": 0
+  }
+ },
+ "stage_done_2": {
+  "auroc": 0.7378118154006991,
+  "0.5x3": {
+   "episodes": 153,
+   "with_stage": 72,
+   "median_delay_steps": 20.0,
+   "p90_delay_steps": 50.0,
+   "missed": 19,
+   "false_triggers": 50
+  },
+  "0.8x3": {
+   "episodes": 153,
+   "with_stage": 72,
+   "median_delay_steps": 20.0,
+   "p90_delay_steps": 46.000000000000014,
+   "missed": 35,
+   "false_triggers": 25
+  }
+ }
+}

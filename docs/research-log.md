@@ -1023,3 +1023,36 @@ unparsed at a 400-token cap — scored as wrong). Scorer 0.65 ms/item + ~7 ms/fr
 Reading: phase/progress at parity with the fine-tuned 7B and above frontier zero-shot; motion direction / bimanual
 need spatio-temporal detail that pooled frame features lose (frame deltas did not help). Qwen's 100 % on T3 looks
 like a text shortcut — to check. Fair π comparison = a head on π0.5's own features (SAFE-style), next GPU session.
+
+## Day 17 — 2026-10-02: X7 — does π0.5's own representation know the answers? (mostly no)
+
+Features = mean over PaliGemma prefix tokens (image tokens | language tokens) after the same prefix pass
+`sample_actions` runs, extracted with `scripts/pi_features.py` (jitted; decode videos before JAX starts or
+imageio's forks deadlock). Pod: L40, ≈4.5 h ≈ $3; terminated.
+
+**(b) Stage detection on our rollouts** (task-1 LoRA checkpoint, fixed full prompt; seed set A → B, 3-sample window):
+
+| features | stage 1 (AUROC / missed / early at p≥.95×5) | stage 2 (AUROC / missed / early at p≥.8×3) |
+|---|---|---|
+| DINOv2-S agent+wrist (the judge) | 1.000 / 0 / 2 | 0.948 / 10 / 4 |
+| π0.5 image tokens (2048-d) | 1.000 / 0 / 0 | **0.738** / 35 / 25 |
+| π0.5 image+language tokens (4096-d) | 0.999 / 0 / 0 | 0.694 / 41 / 20 |
+
+The policy's representation knows when the cookies are in the basket and barely knows when the sauce is — exactly
+the stage it fails. The judge adds information the policy does not carry (caveat: mean pooling discards spatial detail).
+
+**(a) RoboProcessBench GM-100** (base pi05_libero, question text as the prompt, same scorer, same splits):
+
+| family | DINOv2-S scorer | π0.5-feature scorer | Qwen-7B LoRA |
+|---|---|---|---|
+| T1 phase | 42.2 | 38.7 | 43.6 |
+| T5 progress | 39.4 | 33.0 (chance) | 38.7 |
+| T2 contact | 66.0 | **70.0** | 73.3 |
+| T6 motion state | 72.2 | 65.9 | 83.0 |
+| T3 motion direction | 60.5 | 55.5 | 100.0 |
+| T4 bimanual | 36.0 | 36.0 | 72.0 |
+| overall | 45.6 | 42.8 | — |
+
+π's features are slightly worse than a generic DINOv2-S for process questions (better only on contact). Reading: a
+VLA's prefix encoding is optimized for predicting actions, not for judging the scene; a separate judge with its own
+encoder is justified. Raw: `docs/results/rpb_gm100_pi05_features.json`, `docs/results/rollouts_stage_pi05_features_*.json`.
