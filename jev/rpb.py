@@ -127,8 +127,9 @@ class Scorer:
 def train() -> None:
     import torch
     deltas = "--deltas" in sys.argv
+    OUTD = Path(sys.argv[sys.argv.index("--dir") + 1]) if "--dir" in sys.argv else OUT
     dev = "mps" if torch.backends.mps.is_available() else "cpu"
-    tr = np.load(OUT / "sft.npz"); te = np.load(OUT / "eval.npz")
+    tr = np.load(OUTD / "sft.npz"); te = np.load(OUTD / "eval.npz")
     # validation = 10 % of SFT *episodes* (never eval items): epoch selection happens here, eval is scored once
     units = np.array(sorted(set(tr["unit"]))); rng = np.random.default_rng(0); val_units = set(rng.choice(units, size=len(units) // 10, replace=False))
     isval = np.array([u in val_units for u in tr["unit"]])
@@ -136,7 +137,7 @@ def train() -> None:
     pack = lambda d, m: (T(d["V"][m]), T(d["Q"][m]), T(d["O"][m]), T(d["M"][m]), T(d["y"][m], torch.long), T(d["nframes"][m], torch.long))
     Vtr, Qtr, Otr, Mtr, ytr, ntr = pack(tr, ~isval); Vva, Qva, Ova, Mva, yva, nva = pack(tr, isval)
     Vte, Qte, Ote, Mte, yte, nte = pack(te, np.ones(len(te["y"]), bool))
-    model = Scorer(deltas=deltas); [p.to(dev) for p in model.params]; model.net.to(dev); model.q2v.to(dev); model.frame_pos.data = model.frame_pos.data.to(dev)
+    model = Scorer(dv=int(tr["V"].shape[-1]), deltas=deltas); [p.to(dev) for p in model.params]; model.net.to(dev); model.q2v.to(dev); model.frame_pos.data = model.frame_pos.data.to(dev)
     opt = torch.optim.AdamW(model.params, lr=3e-4, weight_decay=0.05)
     N = len(ytr); bs = 256; best = (0, None, -1)
     print(f"train {N} / val {len(yva)} / eval {len(yte)} items; deltas={deltas}")
@@ -172,7 +173,7 @@ def train() -> None:
     print(f"scorer: {nparams/1e6:.2f}M params, {ms:.2f} ms/item on {dev} (+ ~7 ms per frame for DINOv2-S, ~3 ms for text)")
     print(f"overall GM-100 eval accuracy: {100*float((pred == te['y']).mean()):.1f}%")
     json.dump({"per_task": res, "scorer_params": nparams, "scorer_ms": ms, "overall": float((pred == te["y"]).mean()), "deltas": deltas, "epoch": best[2]},
-              open(OUT / f"results{'_deltas' if deltas else ''}.json", "w"), indent=1)
+              open(OUTD / f"results{'_deltas' if deltas else ''}.json", "w"), indent=1)
 
 
 if __name__ == "__main__":
