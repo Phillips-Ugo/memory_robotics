@@ -54,8 +54,10 @@ def label(frame, title, sub, ok=None, t=None, stages=None, minimal=False):
     return np.asarray(im)
 
 
-def tile(clips, cols, speed, titles, subs, oks, stage_list, out, fps=10, minimal=False):
+def tile(clips, cols, speed, titles, subs, oks, stage_list, out, fps=10, minimal=False, max_frames=None):
     n = max(len(c) for c in clips)
+    if max_frames:
+        n = min(n, max_frames)
     rows = (len(clips) + cols - 1) // cols
     writer = iio.imopen(out, "w", plugin="pyav")
     writer.init_video_stream("libx264", fps=fps)
@@ -64,7 +66,7 @@ def tile(clips, cols, speed, titles, subs, oks, stage_list, out, fps=10, minimal
         for c, ti, su, ok, st in zip(clips, titles, subs, oks, stage_list):
             j = min(i, len(c) - 1)
             done = j == len(c) - 1
-            panels.append(label(c[j], ti, su, ok if done else None, t=j, stages=st, minimal=minimal))
+            panels.append(label(c[j], ti(j) if callable(ti) else ti, su, ok if done else None, t=j, stages=st, minimal=minimal))
         while len(panels) < rows * cols:
             panels.append(np.zeros_like(panels[0]))
         grid = np.vstack([np.hstack(panels[r * cols:(r + 1) * cols]) for r in range(rows)])
