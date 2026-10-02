@@ -121,7 +121,7 @@ def run_rollouts(policy_loader, root: str, every: int, prompt: str, out: str, ba
         F.append(prefix_features(policy, np.stack(imgs[i:i + batch]), np.stack(wrs[i:i + batch]), np.zeros((len(imgs[i:i + batch]), 8), np.float32), [prompt] * len(imgs[i:i + batch])))
         if (i // batch) % 20 == 0:
             print(f"  features {i}/{len(rows)} {time.time()-t0:.0f}s", flush=True)
-    np.savez(out, F=np.concatenate(F), rows=np.array([json.dumps(r) for r in rows])); print("wrote", out, np.concatenate(F).shape)
+    np.savez(out, F=np.concatenate(F).astype(np.float16), rows=np.array([json.dumps(r) for r in rows])); print("wrote", out, np.concatenate(F).shape)
 
 
 def run_rpb(policy_loader, rpb: str, gm: str, out: str, batch: int) -> None:
@@ -149,7 +149,7 @@ def run_rpb(policy_loader, rpb: str, gm: str, out: str, batch: int) -> None:
         F.append(prefix_features(policy, im, np.zeros_like(im), np.zeros((len(im), 8), np.float32), prompts[i:i + batch]))
         if (i // batch) % 20 == 0:
             print(f"  features {i}/{len(keys)} {time.time()-t0:.0f}s", flush=True)
-    np.savez(out, F=np.concatenate(F), keys=np.array([f"{p}|{t}" for p, t in keys])); print("wrote", out)
+    np.savez(out, F=np.concatenate(F).astype(np.float16), keys=np.array([f"{p}|{t}" for p, t in keys])); print("wrote", out)
 
 
 def _resize(x: np.ndarray, size: int = 256) -> np.ndarray:
