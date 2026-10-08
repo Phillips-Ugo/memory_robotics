@@ -28,8 +28,8 @@ def main():
     for ci, (t, title, sub) in enumerate(FAM):
         ax = fig.add_axes([ci * cw + 0.012, 0.04, cw - 0.024, 0.92]); ax.set_facecolor(CARD); ax.set_xlim(0, 1); ax.set_ylim(0, 1); ax.axis("off")
         ax.add_patch(FancyBboxPatch((0.0, 0.0), 1.0, 1.0, boxstyle="round,pad=0,rounding_size=0.03", linewidth=1.2, edgecolor=EDGE, facecolor=CARD, transform=ax.transAxes, clip_on=False))
-        ax.text(0.08, 0.88, title, fontsize=20, color=INK, va="center", ha="left")
-        ax.text(0.08, 0.815, sub, fontsize=13, color=SUB, va="center", ha="left")
+        ax.text(0.08, 0.88, title, fontsize=24, color=INK, va="center", ha="left", fontweight="medium")
+        ax.text(0.08, 0.812, sub, fontsize=15, color=SUB, va="center", ha="left")
         vals = sorted(((name, f(t), hi) for name, f, hi in models), key=lambda x: -x[1])
         top = max(v for _, v, _ in vals)
         y0, h = 0.19, 0.50; k = len(vals); bw = 0.17; gap = (0.84 - k * bw) / (k - 1)
@@ -37,9 +37,8 @@ def main():
             x = 0.08 + i * (bw + gap)
             ax.add_patch(Rectangle((x, y0), bw, h * (top / top), facecolor=TRACK, edgecolor="none"))  # light track = best score
             ax.add_patch(Rectangle((x, y0), bw, h * (v / top), facecolor=INK if hi else GRAY, edgecolor="none"))
-            ax.text(x + bw / 2, y0 + h + 0.035, f"{100*v:.1f}%", ha="center", va="bottom", fontsize=16, color=INK if hi else SUB, family="monospace", fontweight="bold" if hi else "normal")
-            ax.text(x + bw / 2, y0 - 0.03, name, ha="center", va="top", fontsize=12.5, color=INK if hi else SUB, fontweight="bold" if hi else "normal", linespacing=1.25)
-    fig.text(0.012, 0.012, "RoboProcessBench, GM-100 split, 2,643 held-out items. Chance: 25% phase, 33% progress, 50% contact.", fontsize=11, color=SUB, va="bottom")
+            ax.text(x + bw / 2, y0 + h + 0.035, f"{100*v:.1f}%", ha="center", va="bottom", fontsize=19, color=INK if hi else SUB, family="monospace", fontweight="bold" if hi else "medium")
+            ax.text(x + bw / 2, y0 - 0.03, name, ha="center", va="top", fontsize=14.5, color=INK if hi else SUB, fontweight="bold" if hi else "medium", linespacing=1.25)
     out = OUT / "rpb_gm100_cards.png"; fig.savefig(out, dpi=120, facecolor=PAGE); print("wrote", out)
 
 
