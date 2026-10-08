@@ -1,4 +1,4 @@
-# ipau — a System-One model for robots (working name was "Jev-R") — design, training plan, evals
+# A System-One model for robots ("Jev-R") — design, training plan, evals
 
 *Draft 2026-09-29. Companion research: `docs/research/jev-brief.md`, `docs/research/fast-decision-models-survey.md`.*
 
