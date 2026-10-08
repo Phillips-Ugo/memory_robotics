@@ -20,7 +20,7 @@ INK, GRAY, TRACK, SUB, PAGE, CARD, EDGE = "#111111", "#b5b5b5", "#efefed", "#6b6
 def main():
     ours = json.load(open("outputs/rpb/results.json"))["per_task"]; qwen = json.load(open(RPB / "qwen_lora_per_task.json"))
     sonnet = json.load(open("outputs/rpb_vlm/results_claude-sonnet-5.json"))["per_task"]; haiku = json.load(open("outputs/rpb_vlm/results_claude-haiku-4-5.json"))["per_task"]
-    models = [("ipau\n23M", lambda t: ours[t]["ours"], True), ("Qwen2.5-VL\n7B, FT", lambda t: qwen[t]["gm100"][0] / qwen[t]["gm100"][1], False),
+    models = [("Ipau\n23M", lambda t: ours[t]["ours"], True), ("Qwen2.5-VL\n7B, FT", lambda t: qwen[t]["gm100"][0] / qwen[t]["gm100"][1], False),
               ("Sonnet 5\nzero-shot", lambda t: sonnet[t]["acc"], False), ("Haiku 4.5\nzero-shot", lambda t: haiku[t]["acc"], False)]
     plt.rcParams.update({"font.family": "sans-serif", "font.sans-serif": ["Helvetica Neue", "Helvetica", "Arial", "DejaVu Sans"]})
     fig = plt.figure(figsize=(16, 8), dpi=120); fig.patch.set_facecolor(PAGE)
