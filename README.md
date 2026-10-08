@@ -2,14 +2,14 @@
 
 Two things, built in public from zero robotics experience since 27 Aug 2026:
 
-1. **Jev for Robotics** — a 23M-parameter *System-One judge* that sits beside a VLA policy and answers typed questions about the robot's situation (which phase, is this subtask done, how far along) from camera frames in **7 ms**, with calibrated probabilities and no text generation.
+1. **ipau** — a 23M-parameter *System-One judge* (Jev-style) that sits beside a VLA policy and answers typed questions about the robot's situation (which phase, is this subtask done, how far along) from camera frames in **7 ms**, with calibrated probabilities and no text generation.
 2. **The memory layer** — a cross-episode memory benchmark ("kitchens with secrets": does the robot learn from last week, and notice when a fact stops being true?) and the library that passes it.
 
 Technical note on the judge, with the architecture, every table and the repro commands: [`docs/site/index.html`](docs/site/index.html). Everything is dated and costed in [`docs/research-log.md`](docs/research-log.md).
 
 <p align="center"><img src="docs/figures/rpb_gm100_cards.png" width="900" alt="RoboProcessBench, GM-100 split: ours (23M) next to a fine-tuned 7B VLM and two zero-shot frontier models on phase, progress and contact"></p>
 
-## Jev for Robotics — results so far
+## ipau — results so far
 
 | what | result | where |
 |---|---|---|
@@ -18,7 +18,7 @@ Technical note on the judge, with the architecture, every table and the repro co
 | Latency | 6.8 ms per decision (two views, RTX 6000 Ada); RoboMonitor (4B VLM) 180–200 ms; π₀.₅ ~100 ms per action chunk | Day 16 |
 | Does the policy's own representation know? | π₀.₅ prefix features: stage-2 AUROC 0.74 vs 0.95 for the judge; benchmark 42.8 vs 45.6 overall → a separate judge is additive | Day 17 |
 
-Judge = frozen DINOv2-S on agent + wrist views, a 3-frame window, 0.7M of trained heads; labels come free from the benchmark's stage checks on recorded rollouts. Design doc: [`docs/jev-robot-design.md`](docs/jev-robot-design.md); research briefs in [`docs/research/`](docs/research/).
+ipau = frozen DINOv2-S on agent + wrist views, a 3-frame window, 0.7M of trained heads; labels come free from the benchmark's stage checks on recorded rollouts. Design doc: [`docs/jev-robot-design.md`](docs/jev-robot-design.md); research briefs in [`docs/research/`](docs/research/).
 
 ## The memory layer — results so far
 
